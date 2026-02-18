@@ -114,7 +114,7 @@ useEffect(() => {
     onChange={(e) => setSearch(e.target.value)}
   />
 
-  <FormControl sx={{ minWidth: 180 }}>
+  <FormControl className="subject-select" sx={{ minWidth: 180 }}>
     <InputLabel id="subject-label">Fach</InputLabel>
     <Select
       labelId="subject-label"
