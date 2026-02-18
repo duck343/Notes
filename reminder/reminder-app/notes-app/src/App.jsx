@@ -12,6 +12,7 @@ import NotesAppFullscreen from "./NotesAppFullscreen.jsx";
 import NotesSearchPage from "./NotesSearchPage.jsx";
 import NotesUploadPage from "./NotesUploadPage.jsx";
 
+import NotesSingleViewer from "./NotesSingleViewer.jsx";
 
 import { FiHome } from "react-icons/fi";
 
@@ -29,7 +30,8 @@ export default function App() {
   const loc = useLocation();
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
+    return onAuthStateChanged(auth, async (u) => {
+      if (u) await u.getIdToken();
       setUser(u);
       setReady(true);
     });
@@ -95,13 +97,15 @@ export default function App() {
           )}
         </div>
 
-        {/* ROUTES */}
         <Routes>
-          <Route path="/" element={user ? <NotesAppFullscreen user={user} /> : <PleaseLogin />} />
-          <Route path="/search" element={user ? <NotesSearchPage user={user} /> : <PleaseLogin />} />
-          <Route path="/upload" element={user ? <NotesUploadPage user={user} /> : <PleaseLogin />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+  <Route path="/" element={user ? <NotesAppFullscreen user={user} /> : <PleaseLogin />} />
+  <Route path="/search" element={user ? <NotesSearchPage user={user} /> : <PleaseLogin />} />
+  <Route path="/upload" element={user ? <NotesUploadPage user={user} /> : <PleaseLogin />} />
+   <Route path="/notes/:id" element={user ? <NotesSingleViewer user={user} /> : <PleaseLogin />} />
+  <Route path="*" element={<Navigate to="/" replace />} />
+</Routes>
+
+
 
         {/* GLOBAL DRAWER (Buttons only) */}
               <Drawer
