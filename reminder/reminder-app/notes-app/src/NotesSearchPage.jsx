@@ -1,130 +1,219 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Tooltip from "@mui/material/Tooltip";
-import { FiExternalLink } from "react-icons/fi";
-import { db } from "./firebase";
-import { SUBJECTS, listenNotes, renderThumbFromUrl } from "./notesShared.js";
-import SubjectSelect from "./components/SubjectSelect.jsx";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  IconButton,
+  Skeleton,
+  Stack,
+  TextField,
+  Typography,
+  FormControl, InputLabel, MenuItem, Select
+} from "@mui/material";
+import { FiFileText } from "react-icons/fi";
 
+import { db } from "./firebase";
+import { getStorageUrl } from "./notesRepo";
+
+import {SUBJECTS} from "./notesShared";
+
+import { doc, getDoc } from "firebase/firestore";
 
 export default function NotesSearchPage() {
+  const nav = useNavigate();
   const [notes, setNotes] = useState([]);
   const [thumbs, setThumbs] = useState({});
-
   const [search, setSearch] = useState("");
-  const [subject, setSubject] = useState("Alle");
+const [usersMap, setUsersMap] = useState({});
 
+  
+const [subject, setSubject] = useState("Alle");
+
+
+  // Notes laden
   useEffect(() => {
-    return listenNotes(db, setNotes);
+    const q = query(collection(db, "notes"), orderBy("createdAt", "desc"));
+    return onSnapshot(q, (snap) => {
+      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setNotes(arr);
+    });
   }, []);
 
-  const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    return notes.filter((n) => {
-      const subjectOk = subject === "Alle" ? true : n.subject === subject;
-      const titleOk = s ? (n.title || "").toLowerCase().includes(s) : true;
-      return subjectOk && titleOk;
-    });
-  }, [notes, search, subject]);
-
+  // Thumbnails laden
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      const slice = filtered.slice(0, 24);
-      for (const n of slice) {
-        if (!alive) return;
-        if (!n.fileUrl) continue;
-        if (thumbs[n.id]) continue;
-        try {
-          const dataUrl = await renderThumbFromUrl(n.fileUrl);
-          if (!alive) return;
-          setThumbs((p) => ({ ...p, [n.id]: dataUrl }));
-        } catch {}
-      }
-    })();
-    return () => { alive = false; };
-  }, [filtered, thumbs]);
+    notes.forEach(async (n) => {
+      if (!n.thumbPath) return;
+      if (thumbs[n.id]) return;
 
-  const openPdf = (note) => {
-    if (!note.fileUrl) return;
-    window.open(note.fileUrl, "_blank", "noopener,noreferrer");
+      try {
+        const url = await getStorageUrl(n.thumbPath);
+        setThumbs((p) => ({ ...p, [n.id]: url }));
+      } catch (err) {
+        console.error("Thumbnail error:", err);
+        setThumbs((p) => ({ ...p, [n.id]: "__error__" }));
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes]);
+
+useEffect(() => {
+  const loadUsers = async () => {
+    const uniqueUids = [...new Set(notes.map(n => n.ownerUid).filter(Boolean))];
+
+    for (const uid of uniqueUids) {
+      if (usersMap[uid]) continue; // schon geladen
+
+      try {
+        const snap = await getDoc(doc(db, "users", uid));
+        if (snap.exists()) {
+          setUsersMap(prev => ({
+            ...prev,
+            [uid]: snap.data().displayName || "Unbekannt"
+          }));
+        }
+      } catch (err) {
+        console.error("User load error:", err);
+      }
+    }
   };
 
+  if (notes.length) loadUsers();
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [notes]);
+
+
+  const filtered = useMemo(() => {
+  const s = search.toLowerCase();
+  return notes.filter((n) => {
+    const okText =
+      !s ||
+      (n.title || "").toLowerCase().includes(s) ||
+      (n.subject || "").toLowerCase().includes(s);
+
+    const okSubject = subject === "Alle" ? true : (n.subject || "Sonstiges") === subject;
+
+    return okText && okSubject;
+  });
+}, [notes, search, subject]);
+
+
   return (
-    <div className="app-shell">
-      <div className="main-area">
-        <div style={{ fontWeight: 900, marginBottom: 12, opacity: 0.9 }}>Suchen</div>
+    <Box sx={{ maxWidth: 1100, mx: "auto", p: 3 }}>
+      <Typography variant="h5" fontWeight={900} mb={2}>
+        Alle Notizen
+      </Typography>
 
-        <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
-          <input
-            type="text"
-            placeholder="Titel suchen…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <SubjectSelect
-  value={subject}
-  onChange={(e) => setSubject(e.target.value)}
-  subjects={SUBJECTS}
-  includeAll
-/>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 3 }}>
+  <TextField
+    label="Suchen"
+    fullWidth
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+  />
 
+  <FormControl sx={{ minWidth: 180 }}>
+    <InputLabel id="subject-label">Fach</InputLabel>
+    <Select
+      labelId="subject-label"
+      label="Fach"
+      value={subject}
+      onChange={(e) => setSubject(e.target.value)}
+    >
+      {SUBJECTS.map((s) => (
+        <MenuItem key={s} value={s}>{s}</MenuItem>
+      ))}
+    </Select>
+  </FormControl>
+</Stack>
 
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+          gap: 2,
+        }}
+      >
+        {filtered.map((n) => {
+          const thumb = thumbs[n.id];
 
+          return (
+            <Card key={n.id}>
+              {/* KEIN CardActionArea -> kein button in button */}
+              <Box
+                onClick={() => nav(`/notes/${n.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === "Enter" && nav(`/notes/${n.id}`)}
+                sx={{ cursor: "pointer" }}
+              >
+                <CardContent>
+                  {/* Thumbnail */}
+                  {!n.thumbPath ? (
+                    <Skeleton variant="rounded" height={220} />
+                  ) : thumb === "__error__" ? (
+                    <Skeleton variant="rounded" height={220} />
+                  ) : !thumb ? (
+                    <Skeleton variant="rounded" height={220} />
+                  ) : (
+                    <Box
+                      component="img"
+                      src={thumb}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      sx={{
+                        width: "100%",
+                        height: 220,
+                        objectFit: "cover",
+                        borderRadius: 2,
+                        mb: 1,
+                      }}
+                    />
+                  )}
 
-          <div style={{ fontSize: 12, opacity: 0.7 }}>
-            Ergebnisse: <b>{filtered.length}</b>
-          </div>
-        </div>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Box sx={{ minWidth: 0 }}>
+                     
+                      <Stack spacing={0.5}>
+  <Typography fontWeight={800} noWrap title={n.title || ""}>
+    {n.title || "Ohne Titel"}
+  </Typography>
 
-        <div className="pdf-grid">
-          {filtered.map((n) => (
-            <div key={n.id} className="pdf-card" onClick={() => openPdf(n)}>
-              <div className="pdf-thumb">
-  {thumbs[n.id] && thumbs[n.id] !== "__error__" ? (
-    <img src={thumbs[n.id]} alt="" />
-  ) : thumbs[n.id] === "__error__" ? (
-    <div style={{ opacity: 0.7, fontSize: 12, padding: 12, textAlign: "center" }}>
-      Kein Thumbnail
-    </div>
-  ) : (
-    <div style={{ opacity: 0.7, fontSize: 12, padding: 12, textAlign: "center" }}>
-      Thumbnail lädt…
-    </div>
-  )}
-</div>
+  <Chip size="small" label={n.subject || "Sonstiges"} />
 
+  <Typography variant="caption" color="text.secondary">
+    von {usersMap[n.ownerUid] || "…"}
+  </Typography>
+</Stack>
 
-              <div className="pdf-meta">
-                <div className="pdf-title">{n.title}</div>
-                <div className="pdf-sub">
-                  <span>{n.subject}</span>
-                  <span style={{ opacity: 0.7 }}>{(n.uploaderName || "").slice(0, 16) || "?"}</span>
-                </div>
+                      
+                    </Box>
 
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <Tooltip title="Öffnen">
-                    <button
-                      className="btn-icon"
-                      onClick={(e) => { e.stopPropagation(); openPdf(n); }}
-                      aria-label="Öffnen"
-                      disabled={!n.fileUrl}
-                      style={{ opacity: n.fileUrl ? 1 : 0.5 }}
+                    {/* PDF Direkt-Öffnen */}
+                    <IconButton
+                      onClick={async (e) => {
+                        e.stopPropagation(); // verhindert Card-Click
+                        try {
+                          const url = await getStorageUrl(n.filePath);
+                          window.open(url, "_blank", "noopener,noreferrer");
+                        } catch (err) {
+                          console.error("PDF öffnen fehlgeschlagen:", err);
+                        }
+                      }}
+                      aria-label="PDF öffnen"
                     >
-                      <FiExternalLink />
-                    </button>
-                  </Tooltip>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filtered.length === 0 && (
-          <p style={{ textAlign: "center", opacity: 0.7, marginTop: 28 }}>
-            Keine Treffer.
-          </p>
-        )}
-      </div>
-    </div>
+                      <FiFileText />
+                    </IconButton>
+                  </Stack>
+                </CardContent>
+              </Box>
+            </Card>
+          );
+        })}
+      </Box>
+    </Box>
   );
 }

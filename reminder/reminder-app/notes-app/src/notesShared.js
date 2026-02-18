@@ -5,6 +5,7 @@ import { collection, onSnapshot, orderBy, query, where } from "firebase/firestor
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export const SUBJECTS = [
+  "Alle",
   "Mathe",
   "Deutsch",
   "Englisch",
@@ -52,13 +53,31 @@ export async function renderThumbFromUrl(url) {
   return canvas.toDataURL("image/jpeg", 0.85);
 }
 
-export function listenMyNotes(db, uid, cb) {
+export function listenMyNotes(db, uid, cb, onError) {
   const q = query(
     collection(db, "notes"),
     where("uploaderUid", "==", uid),
     orderBy("createdAt", "desc")
   );
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => {
+      console.error("listenMyNotes error:", err);
+      onError?.(err);
+    }
+  );
 }
+
+import { getBytes, ref } from "firebase/storage";
+
+export async function loadThumbObjectUrl(storage, thumbPath) {
+  const bytes = await getBytes(ref(storage, thumbPath), 1024 * 1024); // max 1MB
+  const blob = new Blob([bytes], { type: "image/jpeg" });
+  return URL.createObjectURL(blob);
+}
+
+
 
 

@@ -1,135 +1,232 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Tooltip from "@mui/material/Tooltip";
-import { FiExternalLink, FiTrash2 } from "react-icons/fi";
-import { db, storage } from "./firebase";
+import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  IconButton,
+  Skeleton,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { FiFileText } from "react-icons/fi";
+import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
+
+import { db } from "./firebase";
+import { getStorageUrl } from "./notesRepo";
+
 import { deleteDoc, doc } from "firebase/firestore";
-import { deleteObject, ref } from "firebase/storage";
-import { listenMyNotes, renderThumbFromUrl } from "./notesShared.js";
+import { getStorage, ref, deleteObject } from "firebase/storage";
+import { FiTrash2 } from "react-icons/fi";
 
 
 export default function NotesAppFullscreen({ user }) {
+  const nav = useNavigate();
+
   const [notes, setNotes] = useState([]);
-  const [thumbs, setThumbs] = useState({});
+  const [thumbs, setThumbs] = useState({}); // { [id]: url | "__error__" }
+  const [search, setSearch] = useState("");
 
+  const storage = getStorage();
+
+  // Meine Notes laden
   useEffect(() => {
-  return listenMyNotes(db, user.uid, setNotes);
-}, [user.uid]);
+    if (!user?.uid) return;
 
-  const list = useMemo(() => notes, [notes]);
+    const q = query(
+      collection(db, "notes"),
+      where("ownerUid", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
 
+    return onSnapshot(
+      q,
+      (snap) => {
+        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setNotes(arr);
+      },
+      (err) => console.error("onSnapshot error:", err)
+    );
+  }, [user?.uid]);
+
+  // Thumbnails laden (nur wenn thumbPath existiert)
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      const slice = list.slice(0, 24);
-      for (const n of slice) {
-        if (!alive) return;
-        if (!n.fileUrl) continue;
-        if (thumbs[n.id]) continue;
-        try {
-          const dataUrl = await renderThumbFromUrl(n.fileUrl);
-          if (!alive) return;
-          setThumbs((p) => ({ ...p, [n.id]: dataUrl }));
-        } catch {}
+    notes.forEach(async (n) => {
+      if (!n.thumbPath) return;
+      if (thumbs[n.id]) return;
+
+      try {
+        const url = await getStorageUrl(n.thumbPath);
+        setThumbs((p) => ({ ...p, [n.id]: url }));
+      } catch (e) {
+        console.error("Thumb load failed:", n.id, e);
+        setThumbs((p) => ({ ...p, [n.id]: "__error__" }));
       }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [list, thumbs]);
+    });
+    // absichtlich nur notes als dependency (keine Endlosschleife)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes]);
 
-  const openPdf = (note) => {
-    if (!note.fileUrl) return;
-    window.open(note.fileUrl, "_blank", "noopener,noreferrer");
-  };
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return notes;
+    return notes.filter((n) => {
+      const t = (n.title || "").toLowerCase();
+      const sub = (n.subject || "").toLowerCase();
+      return t.includes(s) || sub.includes(s);
+    });
+  }, [notes, search]);
 
-  const removeNote = async (note) => {
-    if (note.uploaderUid !== user.uid) return alert("Nur der Uploader darf löschen.");
-    if (!window.confirm("Wirklich löschen?")) return;
+const handleDelete = async (note) => {
+  const confirmDelete = window.confirm(
+    `Willst du "${note.title || "Ohne Titel"}" wirklich löschen?`
+  );
+  if (!confirmDelete) return;
 
-    try {
-      if (note.filePath) await deleteObject(ref(storage, note.filePath));
-      await deleteDoc(doc(db, "notes", note.id));
-    } catch (e) {
-      alert("Löschen fehlgeschlagen: " + (e?.message || e));
+  try {
+    // 1. PDF löschen
+    if (note.filePath) {
+      await deleteObject(ref(storage, note.filePath));
     }
-  };
+
+    // 2. Thumbnail löschen
+    if (note.thumbPath) {
+      await deleteObject(ref(storage, note.thumbPath));
+    }
+
+    // 3. Firestore Doc löschen
+    await deleteDoc(doc(db, "notes", note.id));
+
+  } catch (err) {
+    console.error("Delete fehlgeschlagen:", err);
+  }
+};
+
+
 
   return (
-    <div className="app-shell">
-      <div className="main-area">
-        <div style={{ fontWeight: 900, marginBottom: 12, opacity: 0.9 }}>Bibliothek</div>
+    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 } }}>
+      <Stack spacing={2.5}>
+        <Box>
+          <Typography variant="h5" fontWeight={900}>
+            Meine PDFs
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Klick auf eine Karte öffnet den Viewer. Icon öffnet PDF direkt.
+          </Typography>
+        </Box>
 
-        <div className="pdf-grid">
-          {list.map((n) => (
-            <div key={n.id} className="pdf-card" onClick={() => openPdf(n)}>
-              <div className="pdf-thumb">
-  {thumbs[n.id] && thumbs[n.id] !== "__error__" ? (
-    <img src={thumbs[n.id]} alt="" />
-  ) : thumbs[n.id] === "__error__" ? (
-    <div style={{ opacity: 0.7, fontSize: 12, padding: 12, textAlign: "center" }}>
-      Kein Thumbnail
-    </div>
-  ) : (
-    <div style={{ opacity: 0.7, fontSize: 12, padding: 12, textAlign: "center" }}>
-      Thumbnail lädt…
-    </div>
-  )}
-</div>
+        <TextField
+          label="Suchen (Titel / Fach)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          fullWidth
+        />
 
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+            gap: 2,
+          }}
+        >
+          {filtered.map((n) => {
+            const thumb = thumbs[n.id];
 
-              <div className="pdf-meta">
-                <div className="pdf-title">{n.title}</div>
-                <div className="pdf-sub">
-                  <span>{n.subject}</span>
-                  <span style={{ opacity: 0.7 }}>{(n.uploaderName || "").slice(0, 16) || "?"}</span>
-                </div>
+            return (
+              <Card key={n.id} sx={{ cursor: "pointer" }}>
+                {/* WICHTIG: kein CardActionArea -> keine button-in-button warnings */}
+                <Box
+                  onClick={() => nav(`/notes/${n.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && nav(`/notes/${n.id}`)}
+                >
+                  <CardContent sx={{ display: "grid", gap: 1.3 }}>
+                    {/* Thumb */}
+                    {!n.thumbPath ? (
+                      <Skeleton variant="rounded" height={220} />
+                    ) : thumb === "__error__" ? (
+                      <Skeleton variant="rounded" height={220} />
+                    ) : !thumb ? (
+                      <Skeleton variant="rounded" height={220} />
+                    ) : (
+                      <Box
+                        component="img"
+                        src={thumb}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        sx={{
+                          width: "100%",
+                          height: 220,
+                          objectFit: "cover",
+                          borderRadius: 2,
+                          border: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      />
+                    )}
 
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <Tooltip title="Öffnen">
-                    <button
-                      className="btn-icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openPdf(n);
-                      }}
-                      aria-label="Öffnen"
-                      disabled={!n.fileUrl}
-                      style={{ opacity: n.fileUrl ? 1 : 0.5 }}
-                    >
-                      <FiExternalLink />
-                    </button>
-                  </Tooltip>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography fontWeight={850} noWrap title={n.title || ""}>
+                          {n.title || "Ohne Titel"}
+                        </Typography>
+                        <Stack direction="row" spacing={1} sx={{ mt: 0.7, flexWrap: "wrap" }}>
+                          <Chip size="small" label={n.subject || "Sonstiges"} />
+                          {!n.thumbPath && (
+                            <Chip size="small" variant="outlined" label="Thumbnail wird erstellt…" />
+                          )}
+                        </Stack>
+                      </Box>
 
-                  <Tooltip title="Löschen">
-                    <button
-                      className="btn-icon btn-del"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeNote(n);
-                      }}
-                      aria-label="Löschen"
-                      disabled={n.uploaderUid !== user.uid}
-                      style={{ opacity: n.uploaderUid !== user.uid ? 0.35 : 1 }}
-                    >
-                      <FiTrash2 />
-                    </button>
-                  </Tooltip>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+                      {/* PDF direkt öffnen */}
+                      <Stack direction="row" spacing={0.5}>
+  {/* PDF öffnen */}
+  <IconButton
+    onClick={async (e) => {
+      e.stopPropagation();
+      try {
+        const url = await getStorageUrl(n.filePath);
+        window.open(url, "_blank", "noopener,noreferrer");
+      } catch (err) {
+        console.error("PDF öffnen fehlgeschlagen:", err);
+      }
+    }}
+    aria-label="PDF öffnen"
+  >
+    <FiFileText />
+  </IconButton>
 
-        {list.length === 0 && (
-          <p style={{ textAlign: "center", opacity: 0.7, marginTop: 28 }}>
-            Noch keine PDFs vorhanden.
-          </p>
+  {/* Löschen */}
+  <IconButton
+    onClick={(e) => {
+      e.stopPropagation();
+      handleDelete(n);
+    }}
+    aria-label="Löschen"
+  >
+    <FiTrash2 />
+  </IconButton>
+</Stack>
+
+                    </Stack>
+                  </CardContent>
+                </Box>
+              </Card>
+            );
+          })}
+        </Box>
+
+        {!filtered.length && (
+          <Typography color="text.secondary">
+            Keine PDFs gefunden. (Oder Filter zu streng.)
+          </Typography>
         )}
-      </div>
-    </div>
+      </Stack>
+    </Box>
   );
 }
-
-
-
-

@@ -1,111 +1,202 @@
-import React, { useState } from "react";
-import Tooltip from "@mui/material/Tooltip";
+import React, { useMemo, useRef, useState } from "react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Divider,
+  FormControl,
+  InputLabel,
+  LinearProgress,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { FiUpload } from "react-icons/fi";
-import { db, storage } from "./firebase";
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
+import { uploadNotePdf } from "./notesRepo";
+import AppShell from "./components/AppShell";
+
 import { SUBJECTS } from "./notesShared.js";
-import { useNavigate } from "react-router-dom";
-import SubjectSelect from "./components/SubjectSelect.jsx";
+
+
 
 
 export default function NotesUploadPage({ user }) {
-  const nav = useNavigate();
-
+  const fileInputRef = useRef(null);
+console.log("UPLOAD PAGE user:", user);
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState(SUBJECTS[0]);
 
-  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState("");
 
-  const startUpload = async () => {
-    if (!file) return alert("Bitte PDF auswählen.");
-    if (!title.trim()) return alert("Bitte Titel eingeben.");
-    if (file.type !== "application/pdf") return alert("Nur PDF erlaubt.");
+  const fileLabel = useMemo(() => {
+    if (!file) return "Noch keine Datei ausgewählt";
+    const kb = Math.round(file.size / 1024);
+    return `${file.name} • ${kb.toLocaleString("de-DE")} KB`;
+  }, [file]);
 
-    setUploading(true);
-    setProgress(0);
+  function pickFile() {
+    fileInputRef.current?.click();
+  }
+
+  function onFileChange(e) {
+    const f = e.target.files?.[0] || null;
+    setStatus("");
+
+    if (!f) {
+      setFile(null);
+      return;
+    }
+    if (!f.name.toLowerCase().endsWith(".pdf")) {
+      setFile(null);
+      e.target.value = "";
+      setStatus("❌ Nur PDF-Dateien sind erlaubt.");
+      return;
+    }
+    setFile(f);
+  }
+
+  async function onSubmit(e) {
+if (!user?.uid) {
+  setStatus("❌ Du bist nicht eingeloggt.");
+  return;
+}
+
+    e.preventDefault();
+    setStatus("");
+
+    if (!file) return setStatus("❌ Bitte zuerst ein PDF auswählen.");
 
     try {
-      const docRef = await addDoc(collection(db, "notes"), {
-        title: title.trim(),
-        subject,
-        uploaderUid: user.uid,
-        uploaderName: user.displayName || "Unbekannt",
-        createdAt: serverTimestamp(),
-        fileUrl: "",
-        filePath: "",
-      });
-
-      const storagePath = `notes/${docRef.id}.pdf`;
-      const storageRef = ref(storage, storagePath);
-
-      const task = uploadBytesResumable(storageRef, file, { contentType: "application/pdf" });
-
-      await new Promise((resolve, reject) => {
-        task.on(
-          "state_changed",
-          (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-          reject,
-          resolve
-        );
-      });
-
-      const url = await getDownloadURL(storageRef);
-      await updateDoc(doc(db, "notes", docRef.id), { fileUrl: url, filePath: storagePath });
-
-      nav("/"); // zurück zur Bibliothek
-    } catch (e) {
-      alert("Upload fehlgeschlagen: " + (e?.message || e));
-    } finally {
-      setUploading(false);
+      setBusy(true);
       setProgress(0);
+
+     await uploadNotePdf({
+  file,
+  title,
+  subject,
+  user,
+  collectionName: "notes",
+  onProgress: setProgress,
+});
+
+
+      setStatus("✅ Upload fertig. Thumbnail wird automatisch erstellt.");
+      setFile(null);
+      setTitle("");
+      setSubject(SUBJECTS[0]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      console.error(err);
+      setStatus(`❌ ${err?.message || "Upload fehlgeschlagen"}`);
+    } finally {
+      setBusy(false);
     }
-  };
+  }
 
   return (
-    <div className="app-shell">
-      <div className="main-area">
-        <div style={{ fontWeight: 900, marginBottom: 12, opacity: 0.9 }}>Upload</div>
+    <AppShell title="Notes">
+      <Box sx={{ maxWidth: 860, mx: "auto" }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+            <Stack spacing={2.5} component="form" onSubmit={onSubmit}>
+              <Box>
+                <Typography variant="h5">PDF hochladen</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  PDF hochladen — Thumbnails werden als Bilder geladen (schnell). PDF erst beim Öffnen.
+                </Typography>
+              </Box>
 
-        <div style={{ display: "grid", gap: 10, maxWidth: 520 }}>
-          <input
-            type="text"
-            placeholder="Titel"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={uploading}
-          />
+              <Divider />
 
-          <SubjectSelect
-  value={subject}
-  onChange={(e) => setSubject(e.target.value)}
-  subjects={SUBJECTS}
-  disabled={uploading}
-/>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  label="Titel"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={busy}
+                />
 
+                <FormControl disabled={busy}>
+                  <InputLabel id="subject-label">Fach</InputLabel>
+                  <Select
+                    labelId="subject-label"
+                    label="Fach"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                  >
+                    {SUBJECTS.map((s) => (
+                      <MenuItem key={s} value={s}>
+                        {s}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
 
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            disabled={uploading}
-          />
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={onFileChange}
+                  style={{ display: "none" }}
+                />
 
-          <Tooltip title="Upload starten">
-            <button className="btn-icon btn-add" onClick={startUpload} disabled={uploading} aria-label="Upload">
-              <FiUpload />
-            </button>
-          </Tooltip>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  startIcon={<FiUpload />}
+                  onClick={pickFile}
+                  disabled={busy}
+                  sx={{ whiteSpace: "nowrap" }}
+                >
+                  PDF auswählen
+                </Button>
 
-          {uploading && (
-            <div style={{ fontSize: 12, opacity: 0.7 }}>
-              Upload: <b>{progress}%</b>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ flex: 1, minWidth: 0 }}
+                  noWrap
+                  title={fileLabel}
+                >
+                  {fileLabel}
+                </Typography>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={busy || !file}
+                  sx={{ whiteSpace: "nowrap" }}
+                >
+                  Hochladen
+                </Button>
+              </Stack>
+
+              {busy && (
+                <Box>
+                  <LinearProgress variant="determinate" value={progress} />
+                  <Typography variant="caption" color="text.secondary">
+                    Upload: {progress}%
+                  </Typography>
+                </Box>
+              )}
+
+              {status && (
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                  {status}
+                </Typography>
+              )}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
+    </AppShell>
   );
 }
