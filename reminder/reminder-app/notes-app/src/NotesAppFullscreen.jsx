@@ -11,27 +11,23 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { FiFileText } from "react-icons/fi";
-import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import { FiFileText, FiTrash2 } from "react-icons/fi";
+
+import { collection, onSnapshot, orderBy, query, where, deleteDoc, doc } from "firebase/firestore";
+import { getStorage, ref, deleteObject } from "firebase/storage";
 
 import { db } from "./firebase";
 import { getStorageUrl } from "./notesRepo";
 
-import { deleteDoc, doc } from "firebase/firestore";
-import { getStorage, ref, deleteObject } from "firebase/storage";
-import { FiTrash2 } from "react-icons/fi";
-
-
 export default function NotesAppFullscreen({ user }) {
   const nav = useNavigate();
-
-  const [notes, setNotes] = useState([]);
-  const [thumbs, setThumbs] = useState({}); // { [id]: url | "__error__" }
-  const [search, setSearch] = useState("");
-
   const storage = getStorage();
 
-  // Meine Notes laden
+  const [notes, setNotes] = useState([]);
+  const [thumbs, setThumbs] = useState({}); // id -> url | "__error__"
+  const [search, setSearch] = useState("");
+
+  // Notes laden
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -43,29 +39,21 @@ export default function NotesAppFullscreen({ user }) {
 
     return onSnapshot(
       q,
-      (snap) => {
-        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setNotes(arr);
-      },
+      (snap) => setNotes(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
       (err) => console.error("onSnapshot error:", err)
     );
   }, [user?.uid]);
 
-  // Thumbnails laden (nur wenn thumbPath existiert)
+  // Thumb-URLs holen (einfach, ohne Timeout)
   useEffect(() => {
-    notes.forEach(async (n) => {
+    notes.forEach((n) => {
       if (!n.thumbPath) return;
-      if (thumbs[n.id]) return;
+      if (thumbs[n.id]) return; // schon versucht (url oder "__error__")
 
-      try {
-        const url = await getStorageUrl(n.thumbPath);
-        setThumbs((p) => ({ ...p, [n.id]: url }));
-      } catch (e) {
-        console.error("Thumb load failed:", n.id, e);
-        setThumbs((p) => ({ ...p, [n.id]: "__error__" }));
-      }
+      getStorageUrl(n.thumbPath)
+        .then((url) => setThumbs((p) => ({ ...p, [n.id]: url })))
+        .catch(() => setThumbs((p) => ({ ...p, [n.id]: "__error__" })));
     });
-    // absichtlich nur notes als dependency (keine Endlosschleife)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes]);
 
@@ -79,32 +67,56 @@ export default function NotesAppFullscreen({ user }) {
     });
   }, [notes, search]);
 
-const handleDelete = async (note) => {
-  const confirmDelete = window.confirm(
-    `Willst du "${note.title || "Ohne Titel"}" wirklich löschen?`
-  );
-  if (!confirmDelete) return;
+  const handleDelete = async (note) => {
+    if (!window.confirm(`Willst du "${note.title || "Ohne Titel"}" wirklich löschen?`)) return;
 
-  try {
-    // 1. PDF löschen
-    if (note.filePath) {
-      await deleteObject(ref(storage, note.filePath));
+    try {
+      if (note.filePath) await deleteObject(ref(storage, note.filePath));
+      if (note.thumbPath) await deleteObject(ref(storage, note.thumbPath));
+      await deleteDoc(doc(db, "notes", note.id));
+
+      // lokalen Cache aufräumen
+      setThumbs((p) => {
+        const copy = { ...p };
+        delete copy[note.id];
+        return copy;
+      });
+    } catch (err) {
+      console.error("Delete fehlgeschlagen:", err);
+    }
+  };
+
+  const renderThumb = (n) => {
+    if (!n.thumbPath) {
+      return <Box className="thumb-fallback">Kein Thumbnail</Box>;
     }
 
-    // 2. Thumbnail löschen
-    if (note.thumbPath) {
-      await deleteObject(ref(storage, note.thumbPath));
+    const thumb = thumbs[n.id];
+
+    if (!thumb) return <Skeleton variant="rounded" height={220} />;
+
+    if (thumb === "__error__") {
+      return <Box className="thumb-fallback">Thumbnail nicht verfügbar</Box>;
     }
 
-    // 3. Firestore Doc löschen
-    await deleteDoc(doc(db, "notes", note.id));
-
-  } catch (err) {
-    console.error("Delete fehlgeschlagen:", err);
-  }
-};
-
-
+    return (
+      <Box
+        component="img"
+        src={thumb}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onError={() => setThumbs((p) => ({ ...p, [n.id]: "__error__" }))}
+        sx={{
+          width: "100%",
+          height: 220,
+          objectFit: "cover",
+          borderRadius: 1,
+          display: "block",
+        }}
+      />
+    );
+  };
 
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 } }}>
@@ -112,9 +124,6 @@ const handleDelete = async (note) => {
         <Box>
           <Typography variant="h5" fontWeight={900}>
             Meine PDFs
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Klick auf eine Karte öffnet den Viewer. Icon öffnet PDF direkt.
           </Typography>
         </Box>
 
@@ -132,99 +141,66 @@ const handleDelete = async (note) => {
             gap: 2,
           }}
         >
-          {filtered.map((n) => {
-            const thumb = thumbs[n.id];
+          {filtered.map((n) => (
+            <Card key={n.id} sx={{ cursor: "pointer" }}>
+              <Box
+                onClick={() => nav(`/notes/${n.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === "Enter" && nav(`/notes/${n.id}`)}
+              >
+                <CardContent sx={{ p: 0 }}>
+                  {renderThumb(n)}
 
-            return (
-              <Card key={n.id} sx={{ cursor: "pointer" }}>
-                {/* WICHTIG: kein CardActionArea -> keine button-in-button warnings */}
-                <Box
-                  onClick={() => nav(`/notes/${n.id}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === "Enter" && nav(`/notes/${n.id}`)}
-                >
-                  
-                  <CardContent sx={{p:0}}>
-                    {/* Thumb */}
-                    {!n.thumbPath ? (
-                      <Skeleton variant="rounded" height={220} />
-                    ) : thumb === "__error__" ? (
-                      <Skeleton variant="rounded" height={220} />
-                    ) : !thumb ? (
-                      <Skeleton variant="rounded" height={220} />
-                    ) : (
-                      <Box
-                        component="img"
-                        src={thumb}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        sx={{
-                          width: "100%",
-                          height: 200,
-                          objectFit: "cover",
-                          borderRadius: 1.3,
-                          border: "1px solid",
-                          borderColor: "divider",
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Box sx={{ minWidth: 0, pl: 2, pt: 1}}>
+                      <Typography fontWeight={850} noWrap title={n.title || ""}>
+                        {n.title || "Ohne Titel"}
+                      </Typography>
+
+                      <Stack direction="row" spacing={1} sx={{ mt: 0.7, flexWrap: "wrap" }}>
+                        <Chip size="small" label={n.subject || "Sonstiges"} />
+                      </Stack>
+                    </Box>
+
+                    <Stack direction="row" spacing={0.5} sx={{ pr: 2 }}>
+                      {/* PDF öffnen */}
+                      <IconButton
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const url = await getStorageUrl(n.filePath);
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          } catch (err) {
+                            console.error("PDF öffnen fehlgeschlagen:", err);
+                          }
                         }}
-                      />
-                    )}
+                        aria-label="PDF öffnen"
+                      >
+                        <FiFileText />
+                      </IconButton>
 
-                    <Stack direction="row" alignItems="center" justifyContent="space-between">
-                      <Box sx={{ minWidth: 0, paddingLeft : 2, paddingTop: 1}}>
-                        <Typography fontWeight={850} noWrap title={n.title || ""}>
-                          {n.title || "Ohne Titel"}
-                        </Typography>
-                        <Stack direction="row" spacing={1} sx={{ mt: 0.7, flexWrap: "wrap" }}>
-                          <Chip size="small" label={n.subject || "Sonstiges"} />
-                          {!n.thumbPath && (
-                            <Chip size="small" variant="outlined" label="Thumbnail wird erstellt…" />
-                          )}
-                        </Stack>
-                      </Box>
-
-                      {/* PDF direkt öffnen */}
-                      <Stack direction="row" spacing={0.5}  sx={{paddingRight : 2}}>
-  {/* PDF öffnen */}
-  <IconButton
-    onClick={async (e) => {
-      e.stopPropagation();
-      try {
-        const url = await getStorageUrl(n.filePath);
-        window.open(url, "_blank", "noopener,noreferrer");
-      } catch (err) {
-        console.error("PDF öffnen fehlgeschlagen:", err);
-      }
-    }}
-    aria-label="PDF öffnen"
-  >
-    <FiFileText />
-  </IconButton>
-
-  {/* Löschen */}
-  <IconButton
-    onClick={(e) => {
-      e.stopPropagation();
-      handleDelete(n);
-    }}
-    aria-label="Löschen"
-  >
-    <FiTrash2 />
-  </IconButton>
-</Stack>
-
+                      {/* Löschen */}
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(n);
+                        }}
+                        aria-label="Löschen"
+                      >
+                        <FiTrash2 />
+                      </IconButton>
                     </Stack>
-                  </CardContent>
-                </Box>
-              </Card>
-            );
-          })}
+                  </Stack>
+                </CardContent>
+              </Box>
+            </Card>
+          ))}
         </Box>
 
         {!filtered.length && (
           <Typography color="text.secondary">
-            Keine PDFs gefunden. (Oder Filter zu streng.)
+            Keine PDFs gefunden.
           </Typography>
         )}
       </Stack>
