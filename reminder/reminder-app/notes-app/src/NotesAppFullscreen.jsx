@@ -145,7 +145,7 @@ const handleDelete = async (note) => {
                   onKeyDown={(e) => e.key === "Enter" && nav(`/notes/${n.id}`)}
                 >
                   
-                  <CardContent>
+                  <CardContent sx={{p:0}}>
                     {/* Thumb */}
                     {!n.thumbPath ? (
                       <Skeleton variant="rounded" height={220} />
@@ -162,7 +162,7 @@ const handleDelete = async (note) => {
                         decoding="async"
                         sx={{
                           width: "100%",
-                          height: 300,
+                          height: 200,
                           objectFit: "cover",
                           borderRadius: 1.3,
                           border: "1px solid",
@@ -172,12 +172,13 @@ const handleDelete = async (note) => {
                     )}
 
                     <Stack direction="row" alignItems="center" justifyContent="space-between">
-                      <Box sx={{ minWidth: 0 }}>
+                      <Box sx={{ minWidth: 0, p:1 }}>
                         <Typography fontWeight={850} noWrap title={n.title || ""}>
                           {n.title || "Ohne Titel"}
+                          
                         </Typography>
                         <Stack direction="row" spacing={1} sx={{ mt: 0.7, flexWrap: "wrap" }}>
-                          <Chip size="small" label={n.subject || "Sonstiges"} />
+                          <Chip size="small" label={n.subject || "Sonstiges"} sx={{marginLeft: 4}}/>
                           {!n.thumbPath && (
                             <Chip size="small" variant="outlined" label="Thumbnail wird erstellt…" />
                           )}
@@ -185,7 +186,7 @@ const handleDelete = async (note) => {
                       </Box>
 
                       {/* PDF direkt öffnen */}
-                      <Stack direction="row" spacing={0.5}>
+                      <Stack direction="row" spacing={0.5} sx={{ p: 1}}>
   {/* PDF öffnen */}
   <IconButton
     onClick={async (e) => {
