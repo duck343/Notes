@@ -18,7 +18,7 @@
   --border: rgba(255,255,255,.18);
   --border-dark: rgba(255,255,255,.10);
 
-  --glass: rgba(255,255,255,.12);
+  --glass: rgba(21, 19, 19, 0.12);
   --glass-2: rgba(255,255,255,.18);
 
   --text: #101114;
@@ -461,3 +461,36 @@ body.dark .task-card {
   background-color: rgba(124, 92, 255, 0.24) !important;
 }
 
+/* Geschlossener Select */
+.subject-select .MuiOutlinedInput-root {
+  background-color: #1e1e2fc5;
+  color: white;
+}
+
+.subject-select .MuiOutlinedInput-notchedOutline {
+  border-color: white;
+}
+
+.subject-select .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #3949ab;
+}
+
+/* Dropdown Menü */
+.MuiPaper-root.MuiMenu-paper {
+  background-color: #0f1b35f2;
+  color: white;
+}
+
+/* Menu Items */
+.MuiMenuItem-root:hover {
+  background-color: #2c2c3f;
+}
+
+.MuiMenuItem-root.Mui-selected {
+  background-color: #3949ab;
+  color: white;
+}
+
+.MuiMenuItem-root.Mui-selected:hover {
+  background-color: #303f9f;
+}
