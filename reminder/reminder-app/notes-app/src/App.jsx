@@ -19,6 +19,9 @@ import { FiHome } from "react-icons/fi";
 
 import "./index.css";
 
+import logoFull from "./assets/logoFull.png";
+
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -69,9 +72,8 @@ export default function App() {
       <div className="glass">
         {/* GLOBAL HEADER (immer sichtbar) */}
         <div className="header-row">
-          <div style={{ fontWeight: 900, fontSize: 18 }}>Notes Library</div>
+          <img src={logoFull} alt="Logo" style={{ width: 200, height: 50 }} />
           <div className="header-spacer" />
-
           <Tooltip title="Menü">
             <button className="btn-icon" onClick={() => setDrawerOpen(true)} aria-label="Menü öffnen">
               <FiMenu />

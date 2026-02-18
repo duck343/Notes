@@ -144,7 +144,8 @@ const handleDelete = async (note) => {
                   tabIndex={0}
                   onKeyDown={(e) => e.key === "Enter" && nav(`/notes/${n.id}`)}
                 >
-                  <CardContent sx={{ display: "grid", gap: 1.3 }}>
+                  
+                  <CardContent>
                     {/* Thumb */}
                     {!n.thumbPath ? (
                       <Skeleton variant="rounded" height={220} />
@@ -161,16 +162,16 @@ const handleDelete = async (note) => {
                         decoding="async"
                         sx={{
                           width: "100%",
-                          height: 220,
+                          height: 300,
                           objectFit: "cover",
-                          borderRadius: 2,
+                          borderRadius: 1.3,
                           border: "1px solid",
                           borderColor: "divider",
                         }}
                       />
                     )}
 
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
                       <Box sx={{ minWidth: 0 }}>
                         <Typography fontWeight={850} noWrap title={n.title || ""}>
                           {n.title || "Ohne Titel"}
