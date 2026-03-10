@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { FiUpload } from "react-icons/fi";
 import { uploadNotePdf } from "./notesRepo";
+import { auth } from "./firebase";
 import AppShell from "./components/AppShell";
 import { SUBJECTS } from "./notesShared.js";
 
@@ -77,6 +78,7 @@ if (!user?.uid) {
   title,
   subject,
   user,
+  ownerName: auth.currentUser?.displayName || user.displayName || "Anonym",
   collectionName: "notes",
   onProgress: setProgress,
 });

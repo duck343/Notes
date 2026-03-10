@@ -1,12 +1,35 @@
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { db, storage } from "./firebase";
+
+export async function getUserProfile(uid) {
+  const snap = await getDoc(doc(db, "users", uid));
+  return snap.exists() ? snap.data() : {};
+}
+
+export async function setUserProfile(uid, data) {
+  await setDoc(doc(db, "users", uid), data, { merge: true });
+}
+
+export async function searchUsersByName(nameQuery) {
+  if (!nameQuery?.trim()) return [];
+  const term = nameQuery.trim();
+  const q = query(
+    collection(db, "users"),
+    where("displayName", ">=", term),
+    where("displayName", "<=", term + "\uf8ff"),
+    limit(20)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
 
 export async function uploadNotePdf({
   file,
   title,
   subject,
   user,
+  ownerName,
   collectionName = "notes",
   onProgress,
 }) {
@@ -38,6 +61,7 @@ export async function uploadNotePdf({
     subject: subject || "Sonstiges",
     filePath,
     ownerUid: user.uid,
+    ownerName: ownerName || user.displayName || "Anonym",
     createdAt: serverTimestamp(),
     thumbPath: null,
     thumbUpdatedAt: null,

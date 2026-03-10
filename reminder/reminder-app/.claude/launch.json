@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "reminder-app",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["notes-app/node_modules/vite/bin/vite.js", "notes-app", "--port", "5199", "--strictPort"],
+      "port": 5199
+    }
+  ]
+}

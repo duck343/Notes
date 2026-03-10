@@ -11,8 +11,9 @@ import { FiLogIn, FiLogOut, FiMenu, FiGrid, FiSearch, FiUpload, FiUser, FiX } fr
 import NotesAppFullscreen from "./NotesAppFullscreen.jsx";
 import NotesSearchPage from "./NotesSearchPage.jsx";
 import NotesUploadPage from "./NotesUploadPage.jsx";
-
 import NotesSingleViewer from "./NotesSingleViewer.jsx";
+import NotesProfilePage from "./NotesProfilePage.jsx";
+import NotesPublicProfilePage from "./NotesPublicProfilePage.jsx";
 
 import { FiHome } from "react-icons/fi";
 
@@ -70,6 +71,8 @@ export default function App() {
   <Route path="/search" element={user ? <NotesSearchPage user={user} /> : <PleaseLogin />} />
   <Route path="/upload" element={user ? <NotesUploadPage user={user} /> : <PleaseLogin />} />
    <Route path="/notes/:id" element={user ? <NotesSingleViewer user={user} /> : <PleaseLogin />} />
+  <Route path="/profile" element={user ? <NotesProfilePage user={user} /> : <PleaseLogin />} />
+  <Route path="/user/:uid" element={user ? <NotesPublicProfilePage user={user} /> : <PleaseLogin />} />
   <Route path="*" element={<Navigate to="/" replace />} />
 </Routes>
 
@@ -126,12 +129,11 @@ export default function App() {
 
     <button
       className="btn-icon"
-      style={{ width: "100%", justifyContent: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14, opacity: 0.55 }}
+      style={{ width: "100%", justifyContent: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14 }}
       onClick={() => { setDrawerOpen(false); nav("/profile"); }}
-      disabled
     >
       <FiUser />
-      <span style={{ fontWeight: 800 }}>Profil (später)</span>
+      <span style={{ fontWeight: 800 }}>Profil</span>
     </button>
 
     {user ? (

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   Box,
   Card,
@@ -157,6 +158,18 @@ export default function NotesAppFullscreen({ user }) {
                       <Typography fontWeight={850} noWrap title={n.title || ""}>
                         {n.title || "Ohne Titel"}
                       </Typography>
+
+                      {n.ownerName && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                          onClick={(e) => { e.stopPropagation(); nav(`/user/${n.ownerUid}`); }}
+                          sx={{ cursor: "pointer", display: "block", "&:hover": { textDecoration: "underline" } }}
+                        >
+                          Von {n.ownerName}
+                        </Typography>
+                      )}
 
                       <Stack direction="row" spacing={1} sx={{ mt: 0.7, flexWrap: "wrap" }}>
                         <Chip size="small" label={n.subject || "Sonstiges"} />
