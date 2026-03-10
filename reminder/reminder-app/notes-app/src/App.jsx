@@ -17,7 +17,7 @@ import NotesSingleViewer from "./NotesSingleViewer.jsx";
 import { FiHome } from "react-icons/fi";
 
 
-import "./index.css";
+import "./styles/global.css";
 
 import logoFull from "./assets/logoFull.png";
 
@@ -47,25 +47,7 @@ export default function App() {
     nav(path);
   };
 
-  const MenuBtn = ({ active, icon, label, onClick }) => (
-    <button
-      className="btn-icon"
-      onClick={onClick}
-      style={{
-        width: "100%",
-        justifyContent: "flex-start",
-        gap: 10,
-        padding: "12px 14px",
-        borderRadius: 14,
-        opacity: active ? 1 : 0.92,
-        borderColor: active ? "rgba(124, 92, 255, .35)" : undefined,
-      }}
-      aria-label={label}
-    >
-      {icon}
-      <span style={{ fontWeight: 800 }}>{label}</span>
-    </button>
-  );
+  
 
   return (
     <div className="app-wrapper">
@@ -80,23 +62,7 @@ export default function App() {
             </button>
           </Tooltip>
 
-          {user ? (
-            <Tooltip title="Abmelden">
-              <button className="btn-icon" onClick={() => signOut(auth)} aria-label="Abmelden">
-                <FiLogOut />
-              </button>
-            </Tooltip>
-          ) : (
-            <Tooltip title="Anmelden">
-              <button
-                className="btn-icon"
-                onClick={() => signInWithPopup(auth, googleProvider)}
-                aria-label="Anmelden"
-              >
-                <FiLogIn />
-              </button>
-            </Tooltip>
-          )}
+          
         </div>
 
         <Routes>
@@ -167,6 +133,24 @@ export default function App() {
       <FiUser />
       <span style={{ fontWeight: 800 }}>Profil (später)</span>
     </button>
+
+    {user ? (
+            <Tooltip title="Abmelden">
+              <button className="btn-icon" onClick={() => signOut(auth)} aria-label="Abmelden">
+                <FiLogOut />
+              </button>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Anmelden">
+              <button
+                className="btn-icon"
+                onClick={() => signInWithPopup(auth, googleProvider)}
+                aria-label="Anmelden"
+              >
+                <FiLogIn />
+              </button>
+            </Tooltip>
+          )}
   </div>
 </Drawer>
       </div>

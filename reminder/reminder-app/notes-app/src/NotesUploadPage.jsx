@@ -17,11 +17,7 @@ import {
 import { FiUpload } from "react-icons/fi";
 import { uploadNotePdf } from "./notesRepo";
 import AppShell from "./components/AppShell";
-
 import { SUBJECTS } from "./notesShared.js";
-
-
-
 
 export default function NotesUploadPage({ user }) {
   const fileInputRef = useRef(null);
