@@ -56,6 +56,11 @@ export async function getTopUsers(limitCount = 20) {
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
 }
 
+export async function getAllUsers(limitCount = 100) {
+  const snap = await getDocs(query(collection(db, "users"), limit(limitCount)));
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+
 export async function uploadNotePdf({
   file,
   title,

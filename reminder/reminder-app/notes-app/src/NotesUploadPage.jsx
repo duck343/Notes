@@ -83,7 +83,7 @@ if (!user?.uid) {
 });
 
 
-      setStatus("✅ Upload fertig. Thumbnail wird automatisch erstellt.");
+      setStatus("Upload fertig.");
       setFile(null);
       setTitle("");
       setSubject(SUBJECTS[0]);

@@ -34,7 +34,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "./firebase";
-import { getStorageUrl, searchUsersByName, getTopUsers } from "./notesRepo";
+import { getStorageUrl, searchUsersByName, getAllUsers } from "./notesRepo";
 import { SUBJECTS } from "./notesShared";
 
 const PAGE_SIZE = 12;
@@ -155,8 +155,11 @@ export default function NotesSearchPage({ user }) {
   useEffect(() => {
     if (!userQuery.trim()) {
       setUserResults([]);
-      // show popular users when the field is empty
-      getTopUsers(20).then(setPopularUsers).catch(console.error);
+      // fetch a larger pool and shuffle for random display
+      getAllUsers(200).then((all) => {
+        const shuffled = [...all].sort(() => Math.random() - 0.5);
+        setPopularUsers(shuffled.slice(0, 10));
+      }).catch(console.error);
       return;
     }
     setUserSearching(true);
@@ -355,7 +358,7 @@ export default function NotesSearchPage({ user }) {
             )}
 
             {!userSearching && !userQuery.trim() && popularUsers.length > 0 && (
-              <Typography color="text.secondary">Beliebte Nutzer</Typography>
+              <Typography color="text.secondary">Nutzer</Typography>
             )}
 
             {!userSearching && userQuery.trim() && userResults.length === 0 && (
