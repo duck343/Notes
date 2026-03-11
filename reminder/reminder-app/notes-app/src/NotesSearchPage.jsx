@@ -1,38 +1,43 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Avatar,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
+  CircularProgress,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Skeleton,
   Stack,
   Tab,
   Tabs,
   TextField,
   Typography,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Avatar,
 } from "@mui/material";
 import { FiFileText, FiHeart, FiUser } from "react-icons/fi";
 
 import {
   collection,
-  onSnapshot,
+  getDocs,
   orderBy,
   query,
-  where,
+  limit,
+  startAfter,
   doc,
   runTransaction,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
-import { getStorageUrl, searchUsersByName } from "./notesRepo";
+import { getStorageUrl, searchUsersByName, getTopUsers } from "./notesRepo";
 import { SUBJECTS } from "./notesShared";
+
+const PAGE_SIZE = 12;
 
 export default function NotesSearchPage({ user }) {
   const nav = useNavigate();
@@ -43,26 +48,44 @@ export default function NotesSearchPage({ user }) {
   const [thumbs, setThumbs] = useState({});
   const [search, setSearch] = useState("");
   const [subject, setSubject] = useState("Alle");
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const lastDocRef = useRef(null);
+  const busyRef = useRef(false);
 
   // --- Benutzer-Tab ---
   const [userQuery, setUserQuery] = useState("");
   const [userResults, setUserResults] = useState([]);
+  const [popularUsers, setPopularUsers] = useState([]);
   const [userSearching, setUserSearching] = useState(false);
 
-  // Notes laden
+  async function loadNotes(reset = false) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setLoading(true);
+    try {
+      const q = reset || !lastDocRef.current
+        ? query(collection(db, "notes"), orderBy("createdAt", "desc"), limit(PAGE_SIZE))
+        : query(collection(db, "notes"), orderBy("createdAt", "desc"), startAfter(lastDocRef.current), limit(PAGE_SIZE));
+
+      const snap = await getDocs(q);
+      const newDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      lastDocRef.current = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
+      setHasMore(snap.docs.length === PAGE_SIZE);
+      setNotes((prev) => reset ? newDocs : [...prev, ...newDocs]);
+    } catch (err) {
+      console.error("loadNotes error:", err);
+    } finally {
+      busyRef.current = false;
+      setLoading(false);
+    }
+  }
+
+  // Initial load
   useEffect(() => {
-    if (!user?.uid) return;
-    const q = query(
-      collection(db, "notes"),
-      where("ownerUid", "==", user.uid),
-      orderBy("createdAt", "desc")
-    );
-    return onSnapshot(
-      q,
-      (snap) => setNotes(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      (err) => console.error("onSnapshot error:", err)
-    );
-  }, [user?.uid]);
+    lastDocRef.current = null;
+    loadNotes(true);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Thumb-URLs laden
   useEffect(() => {
@@ -77,7 +100,7 @@ export default function NotesSearchPage({ user }) {
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    const base = notes.filter((n) => {
+    return notes.filter((n) => {
       const okText =
         !s ||
         (n.title || "").toLowerCase().includes(s) ||
@@ -85,7 +108,6 @@ export default function NotesSearchPage({ user }) {
       const okSubject = subject === "Alle" ? true : (n.subject || "Sonstiges") === subject;
       return okText && okSubject;
     });
-    return base.sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
   }, [notes, search, subject]);
 
   const toggleLike = async (note) => {
@@ -110,6 +132,20 @@ export default function NotesSearchPage({ user }) {
           });
         }
       });
+      // Optimistic local update
+      setNotes((prev) =>
+        prev.map((n) => {
+          if (n.id !== note.id) return n;
+          const likedBy = n.likedBy || {};
+          const alreadyLiked = !!likedBy[user.uid];
+          if (alreadyLiked) {
+            const newLikedBy = { ...likedBy };
+            delete newLikedBy[user.uid];
+            return { ...n, likedBy: newLikedBy, likesCount: Math.max(0, (n.likesCount || 0) - 1) };
+          }
+          return { ...n, likedBy: { ...likedBy, [user.uid]: true }, likesCount: (n.likesCount || 0) + 1 };
+        })
+      );
     } catch (err) {
       console.error("Like failed:", err);
     }
@@ -119,12 +155,14 @@ export default function NotesSearchPage({ user }) {
   useEffect(() => {
     if (!userQuery.trim()) {
       setUserResults([]);
+      // show popular users when the field is empty
+      getTopUsers(20).then(setPopularUsers).catch(console.error);
       return;
     }
     setUserSearching(true);
     const timeout = setTimeout(() => {
       searchUsersByName(userQuery)
-        .then(setUserResults)
+        .then((results) => setUserResults(results.sort((a, b) => (b.followersCount || 0) - (a.followersCount || 0))))
         .catch(console.error)
         .finally(() => setUserSearching(false));
     }, 400);
@@ -150,7 +188,7 @@ export default function NotesSearchPage({ user }) {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
       <Stack spacing={2.5}>
         <Typography variant="h5" fontWeight={900}>Suche</Typography>
 
@@ -185,11 +223,26 @@ export default function NotesSearchPage({ user }) {
               </FormControl>
             </Stack>
 
+            {/* Loading skeleton on first load */}
+            {loading && notes.length === 0 && (
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                  gap: 1,
+                }}
+              >
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} variant="rounded" height={300} />
+                ))}
+              </Box>
+            )}
+
             <Box
               sx={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                gap: 2,
+                gap: 1,
               }}
             >
               {filtered.map((n) => {
@@ -221,7 +274,7 @@ export default function NotesSearchPage({ user }) {
                           direction="row"
                           alignItems="center"
                           justifyContent="space-between"
-                          sx={{ px: 2, width: "100%" }}
+                          sx={{ px: 2, pb: 1, width: "100%" }}
                         >
                           <Stack direction="row" spacing={1} alignItems="center">
                             <Chip size="small" label={n.subject || "Sonstiges"} />
@@ -231,7 +284,7 @@ export default function NotesSearchPage({ user }) {
                                 aria-label="Like"
                                 size="small"
                               >
-                                <FiHeart style={{ opacity: liked ? 1 : 0.35, color: liked ? "red" : "white" }} />
+                                <FiHeart style={{ opacity: liked ? 1 : 0.35, color: liked ? "red" : "inherit" }} />
                               </IconButton>
                               <Typography variant="body2" color="text.secondary">
                                 {n.likesCount || 0}
@@ -260,8 +313,28 @@ export default function NotesSearchPage({ user }) {
               })}
             </Box>
 
-            {!filtered.length && (
+            {!loading && notes.length > 0 && filtered.length === 0 && (
               <Typography color="text.secondary">Keine PDFs gefunden.</Typography>
+            )}
+
+            {/* Load more button */}
+            {hasMore && notes.length > 0 && (
+              <Box sx={{ display: "flex", justifyContent: "center", pt: 1 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => loadNotes(false)}
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={16} /> : null}
+                >
+                  {loading ? "Lädt…" : "Mehr laden"}
+                </Button>
+              </Box>
+            )}
+
+            {!hasMore && notes.length > 0 && (
+              <Typography color="text.secondary" align="center" variant="body2">
+                Alle {notes.length} PDFs geladen
+              </Typography>
             )}
           </Stack>
         )}
@@ -281,12 +354,16 @@ export default function NotesSearchPage({ user }) {
               <Typography color="text.secondary">Suche…</Typography>
             )}
 
+            {!userSearching && !userQuery.trim() && popularUsers.length > 0 && (
+              <Typography color="text.secondary">Beliebte Nutzer</Typography>
+            )}
+
             {!userSearching && userQuery.trim() && userResults.length === 0 && (
               <Typography color="text.secondary">Keine Benutzer gefunden.</Typography>
             )}
 
             <Stack spacing={1}>
-              {userResults.map((u) => {
+              {(userQuery.trim() ? userResults : popularUsers).map((u) => {
                 const initials = (u.displayName || "?")
                   .split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
                 return (
@@ -296,14 +373,17 @@ export default function NotesSearchPage({ user }) {
                     onClick={() => nav(`/user/${u.uid}`)}
                   >
                     <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}>
-                      <Stack direction="row" alignItems="center" spacing={2}>
+                      <Stack direction="row" alignItems="center" spacing={2} sx={{ width: "100%" }}>
                         <Avatar src={u.photoURL || undefined} sx={{ width: 44, height: 44 }}>
                           {!u.photoURL && initials}
                         </Avatar>
-                        <Typography fontWeight={700}>{u.displayName}</Typography>
-                        <Box sx={{ ml: "auto" }}>
-                          <FiUser style={{ opacity: 0.4 }} />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography fontWeight={700} noWrap>{u.displayName}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {u.followersCount || 0} Follower
+                          </Typography>
                         </Box>
+                        <FiUser style={{ opacity: 0.4, flexShrink: 0 }} />
                       </Stack>
                     </CardContent>
                   </Card>

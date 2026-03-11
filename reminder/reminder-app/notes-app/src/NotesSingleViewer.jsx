@@ -48,7 +48,7 @@ export default function NotesSingleViewer() {
   }, [id]);
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
       <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
         <Button variant="outlined" startIcon={<FiArrowLeft />} onClick={() => nav(-1)}>
           Zurück

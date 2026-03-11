@@ -22,7 +22,6 @@ import { SUBJECTS } from "./notesShared.js";
 
 export default function NotesUploadPage({ user }) {
   const fileInputRef = useRef(null);
-console.log("UPLOAD PAGE user:", user);
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState(SUBJECTS[0]);
@@ -99,7 +98,7 @@ if (!user?.uid) {
 
   return (
     <AppShell title="Notes">
-      <Box sx={{ maxWidth: 860, mx: "auto" }}>
+      <Box sx={{ width: "100%", mx: "auto" }}>
         <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
             <Stack spacing={2.5} component="form" onSubmit={onSubmit}>

@@ -1,82 +1,14 @@
 /* =========================
-   Design Tokens (einheitlich)
-   ========================= */
-:root {
-  /* Colors */
-  --bg: #0b0f17;
-  --surface: rgba(255, 255, 255, 0.06);
-  --surface-2: rgba(255, 255, 255, 0.09);
-  --border: rgba(255, 255, 255, 0.12);
-
-  --text: rgba(255, 255, 255, 0.92);
-  --muted: rgba(255, 255, 255, 0.66);
-  --faint: rgba(255, 255, 255, 0.48);
-
-  --primary: #7c5cff;      /* modern purple */
-  --primary-2: #5bdbff;    /* accent */
-  --danger: #ff4d6d;
-  --success: #3ddc97;
-
-  /* Radius */
-  --r-xl: 20px;
-  --r-lg: 14px;
-  --r-md: 10px;
-  --r-sm: 8px;
-
-  /* Spacing */
-  --s-1: 6px;
-  --s-2: 10px;
-  --s-3: 14px;
-  --s-4: 18px;
-  --s-5: 24px;
-  --s-6: 32px;
-  --s-7: 44px;
-
-  /* Shadows */
-  --shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
-
-  /* Typography */
-  --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-
-  /* Focus */
-  --focus: 0 0 0 3px rgba(124, 92, 255, 0.35);
-}
-
-/* Optional: Light Mode (wenn du später willst)
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f6f7fb;
-    --surface: rgba(0,0,0,0.04);
-    --surface-2: rgba(0,0,0,0.06);
-    --border: rgba(0,0,0,0.10);
-    --text: rgba(0,0,0,0.86);
-    --muted: rgba(0,0,0,0.60);
-    --faint: rgba(0,0,0,0.45);
-    --shadow: 0 18px 60px rgba(0,0,0,0.12);
-  }
-}
-*/
-
-/* =========================
    Base Reset
    ========================= */
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body {
-  margin: 0;
-  font-family: var(--font);
-  color: var(--text);
-  background: radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.18), transparent 55%),
-              radial-gradient(1000px 700px at 85% 20%, rgba(91, 219, 255, 0.14), transparent 55%),
-              var(--bg);
-}
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; }
-img { max-width: 100%; display: block;}
+img { max-width: 100%; display: block; }
 
 /* =========================
-   Layout Helpers (überall)
+   Layout Helpers
    ========================= */
 .app {
   min-height: 100vh;
@@ -88,18 +20,18 @@ img { max-width: 100%; display: block;}
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
-  padding: var(--s-6) var(--s-4);
+  padding: 32px 18px;
 }
 
 .pageTitle {
   font-size: 28px;
   font-weight: 850;
   letter-spacing: -0.02em;
-  margin: 0 0 var(--s-2) 0;
+  margin: 0 0 10px 0;
 }
 
 .pageSub {
-  margin: 0 0 var(--s-5) 0;
+  margin: 0 0 24px 0;
   color: var(--muted);
   line-height: 1.45;
 }
@@ -108,29 +40,29 @@ img { max-width: 100%; display: block;}
    Surface / Cards
    ========================= */
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
+  background: var(--glass);
   border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
   backdrop-filter: blur(10px);
 }
 
-.cardBody { padding: var(--s-6); }
-.cardBody.sm { padding: var(--s-4); }
+.cardBody { padding: 32px; }
+.cardBody.sm { padding: 18px; }
 
 .row {
   display: flex;
-  gap: var(--s-3);
+  gap: 14px;
   align-items: center;
 }
 
 .stack {
   display: grid;
-  gap: var(--s-3);
+  gap: 14px;
 }
 
 /* =========================
-   Inputs (einheitlich)
+   Inputs
    ========================= */
 .field {
   display: grid;
@@ -146,24 +78,25 @@ img { max-width: 100%; display: block;}
 .input, .select, .textarea {
   width: 100%;
   padding: 12px 12px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  background: rgba(0,0,0,0.25);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--field-border);
+  background: var(--field-bg);
   color: var(--text);
   outline: none;
-  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .textarea { min-height: 110px; resize: vertical; }
 
 .input:focus, .select:focus, .textarea:focus {
   border-color: rgba(124, 92, 255, 0.55);
-  box-shadow: var(--focus);
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
 }
 
 .hint {
   font-size: 12px;
-  color: var(--faint);
+  color: var(--muted);
+  opacity: 0.7;
 }
 
 /* File input button wrapper */
@@ -179,7 +112,7 @@ img { max-width: 100%; display: block;}
 }
 
 /* =========================
-   Buttons (einheitlich)
+   Buttons
    ========================= */
 .btn {
   display: inline-flex;
@@ -187,26 +120,23 @@ img { max-width: 100%; display: block;}
   justify-content: center;
   gap: 10px;
   padding: 11px 14px;
-  border-radius: var(--r-md);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.06);
+  background: var(--btn-bg);
   color: var(--text);
   cursor: pointer;
   user-select: none;
   transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
 
-.btn:hover {
-  background: rgba(255,255,255,0.09);
-  border-color: rgba(255,255,255,0.18);
-}
-
+.btn:hover { background: var(--btn-bg-hover); }
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btn.primary {
   border: 1px solid rgba(124, 92, 255, 0.45);
   background: linear-gradient(180deg, rgba(124, 92, 255, 0.95), rgba(124, 92, 255, 0.70));
+  color: #fff;
 }
 
 .btn.primary:hover {
@@ -214,9 +144,7 @@ img { max-width: 100%; display: block;}
   background: linear-gradient(180deg, rgba(124, 92, 255, 1), rgba(124, 92, 255, 0.78));
 }
 
-.btn.ghost {
-  background: transparent;
-}
+.btn.ghost { background: transparent; }
 
 .badge {
   display: inline-flex;
@@ -224,7 +152,7 @@ img { max-width: 100%; display: block;}
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.06);
+  background: var(--btn-bg);
   color: var(--muted);
   font-size: 12px;
 }
@@ -236,7 +164,7 @@ img { max-width: 100%; display: block;}
   width: 100%;
   height: 10px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: var(--btn-bg);
   border: 1px solid var(--border);
   overflow: hidden;
 }
@@ -244,7 +172,7 @@ img { max-width: 100%; display: block;}
 .progressBar {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  background: linear-gradient(90deg, #7c5cff, #26c6ff);
 }
 
 /* =========================
@@ -253,26 +181,26 @@ img { max-width: 100%; display: block;}
 .gridCards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--s-4);
+  gap: 18px;
 }
 
 .noteRow {
   display: grid;
   grid-template-columns: 160px 1fr;
-  gap: var(--s-4);
+  gap: 18px;
   align-items: start;
-  padding: var(--s-4);
-  border-radius: var(--r-lg);
+  padding: 18px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.05);
+  background: var(--glass);
 }
 
 .thumb {
   width: 160px;
   height: 220px;
-  border-radius: var(--r-lg);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  background: rgba(0,0,0,0.25);
+  background: var(--btn-bg);
   overflow: hidden;
 }
 
@@ -288,157 +216,28 @@ img { max-width: 100%; display: block;}
 }
 
 .metaSub { color: var(--muted); }
-.metaSmall { margin-top: 10px; color: var(--faint); font-size: 12px; }
+.metaSmall { margin-top: 10px; color: var(--muted); opacity: 0.7; font-size: 12px; }
 
 /* =========================
    Small responsive tweaks
    ========================= */
 @media (max-width: 560px) {
-  .container { padding: var(--s-5) var(--s-3); }
+  .container { padding: 24px 14px; }
   .noteRow { grid-template-columns: 1fr; }
   .thumb { width: 100%; height: 220px; }
 }
 
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 40px;
-  height: 40px;
-
-  border: 1px solid var(--field-border);
-  border-radius: 14px;
-  background: var(--btn-bg);
-  color: inherit;
-
-  cursor: pointer;
-  user-select: none;
-
-  transition:
-    transform 180ms var(--ease),
-    background 180ms var(--ease),
-    box-shadow 220ms var(--ease),
-    border-color 220ms var(--ease),
-    filter 220ms var(--ease);
-  box-shadow: var(--shadow-sm);
-}
-
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 40px;
-  height: 40px;
-
-  border: 1px solid var(--field-border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.062);
-  color: inherit;
-
-  cursor: pointer;
-  user-select: none;
-
-  transition:
-    transform 180ms var(--ease),
-    background 180ms var(--ease),
-    box-shadow 220ms var(--ease),
-    border-color 220ms var(--ease),
-    filter 220ms var(--ease);
-  box-shadow: var(--shadow-sm);
-}
-
-.btn-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.btn-icon:hover {
-  background: var(--btn-bg-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.btn-icon:active {
-  transform: translateY(0) scale(.98);
-  box-shadow: var(--shadow-sm);
-}
-
-.btn-icon:disabled {
-  opacity: .45;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-
-
-.header-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 14px 10px;
-}
-
-.header-spacer { flex: 1; }
-
-
-/* MUI Menu popover über allem */
-.MuiPopover-root {
-  z-index: 5000;
-}
-
-/* Option-Highlight nicht hässlich blau */
-.MuiMenuItem-root.Mui-selected {
-  background-color: rgba(124, 92, 255, 0.18) !important;
-}
-.MuiMenuItem-root.Mui-selected:hover {
-  background-color: rgba(124, 92, 255, 0.24) !important;
-}
-
-/* Geschlossener Select */
-.subject-select .MuiOutlinedInput-root {
-  background-color: #1e1e2fc5;
-  color: white;
-}
-
-.subject-select .MuiOutlinedInput-notchedOutline {
-  border-color: white;
-}
-
-.subject-select .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
-  border-color: #3949ab;
-}
-
-/* Dropdown Menü */
-.MuiPaper-root.MuiMenu-paper {
-  background-color: #0f1b35f2;
-  color: white;
-}
-
-/* Menu Items */
-.MuiMenuItem-root:hover {
-  background-color: #2c2c3f;
-}
-
-.MuiMenuItem-root.Mui-selected {
-  background-color: #3949ab;
-  color: white;
-}
-
-.MuiMenuItem-root.Mui-selected:hover {
-  background-color: #303f9f;
-}
-
-
+/* =========================
+   Thumb Fallback
+   ========================= */
 .thumb-fallback {
   height: 220px;
   display: grid;
   place-items: center;
   border-radius: 16px;
-  border: 3px solid rgba(255, 255, 255, 0.164);
-  color: rgb(255, 255, 255);
-  background: #0000003d;
+  border: 1px solid var(--thumb-fallback-border);
+  color: var(--thumb-fallback-color);
+  background: var(--thumb-fallback-bg);
   font-size: 15px;
-  font-weight: 900;
+  font-weight: 600;
 }

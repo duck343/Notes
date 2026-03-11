@@ -3,7 +3,12 @@ const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const logger = require("firebase-functions/logger");
 const { getStorage } = require("firebase-admin/storage");
 
-const { createCanvas, Image } = require("canvas");
+let createCanvas, Image;
+try {
+  ({ createCanvas, Image } = require("canvas"));
+} catch (e) {
+  console.warn("canvas module not available, thumbnail generation disabled", e);
+}
 const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 
 admin.initializeApp();

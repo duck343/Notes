@@ -14,10 +14,12 @@
   },
   "main": "index.js",
   "dependencies": {
-    "canvas": "^3.2.1",
     "firebase-admin": "^13.6.1",
     "firebase-functions": "^7.0.5",
     "pdfjs-dist": "^3.11.174"
+  },
+  "optionalDependencies": {
+    "canvas": "^3.2.1"
   },
   "devDependencies": {
     "eslint": "^8.15.0",

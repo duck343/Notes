@@ -10,8 +10,9 @@ import {
   Chip,
   IconButton,
   Skeleton,
+  Button,
 } from "@mui/material";
-import { FiFileText, FiHeart, FiArrowLeft } from "react-icons/fi";
+import { FiFileText, FiHeart, FiArrowLeft, FiUserPlus, FiUserCheck, FiUsers } from "react-icons/fi";
 import {
   collection,
   query,
@@ -23,7 +24,7 @@ import {
   runTransaction,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { getStorageUrl } from "./notesRepo";
+import { getStorageUrl, toggleFollow, addFriend, removeFriend, getUserProfile } from "./notesRepo";
 
 export default function NotesPublicProfilePage({ user }) {
   const { uid } = useParams();
@@ -34,6 +35,17 @@ export default function NotesPublicProfilePage({ user }) {
   const [thumbs, setThumbs] = useState({});
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingNotes, setLoadingNotes] = useState(true);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [isFriend, setIsFriend]           = useState(false);
+  const [friendLoading, setFriendLoading] = useState(false);
+
+  // Check friend status
+  useEffect(() => {
+    if (!user?.uid || !uid || user.uid === uid) return;
+    getUserProfile(user.uid).then((p) => {
+      setIsFriend(!!(p.friendUids || []).includes(uid));
+    }).catch(console.error);
+  }, [user?.uid, uid]);
 
   // Load user profile from Firestore
   useEffect(() => {
@@ -140,9 +152,48 @@ export default function NotesPublicProfilePage({ user }) {
     .toUpperCase();
 
   const isOwnProfile = user?.uid === uid;
+  const isFollowing = !!(profile?.followers && user?.uid && profile.followers[user.uid]);
+  const followersCount = profile?.followersCount || 0;
+
+  const handleFriend = async () => {
+    if (!user?.uid || isOwnProfile) return;
+    setFriendLoading(true);
+    try {
+      if (isFriend) {
+        await removeFriend(user.uid, uid);
+        setIsFriend(false);
+      } else {
+        await addFriend(user.uid, uid);
+        setIsFriend(true);
+      }
+    } catch (err) { console.error("Friend failed:", err); }
+    finally { setFriendLoading(false); }
+  };
+
+  const handleFollow = async () => {
+    if (!user?.uid || isOwnProfile) return;
+    setFollowLoading(true);
+    try {
+      const nowFollowing = await toggleFollow(user.uid, uid);
+      setProfile((p) => {
+        if (!p) return p;
+        const followers = { ...(p.followers || {}) };
+        if (nowFollowing) {
+          followers[user.uid] = true;
+        } else {
+          delete followers[user.uid];
+        }
+        return { ...p, followers, followersCount: Math.max(0, (p.followersCount || 0) + (nowFollowing ? 1 : -1)) };
+      });
+    } catch (err) {
+      console.error("Follow failed:", err);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
       <Stack spacing={3}>
         {/* Zurück */}
         <Box>
@@ -153,7 +204,7 @@ export default function NotesPublicProfilePage({ user }) {
         </Box>
 
         {/* Profil-Header */}
-        <Stack direction="row" alignItems="center" spacing={2}>
+        <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
           {loadingProfile ? (
             <Skeleton variant="circular" width={72} height={72} />
           ) : (
@@ -161,7 +212,7 @@ export default function NotesPublicProfilePage({ user }) {
               {!profile?.photoURL && initials}
             </Avatar>
           )}
-          <Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="h5" fontWeight={900}>
               {loadingProfile ? <Skeleton width={160} /> : profile?.displayName}
               {isOwnProfile && (
@@ -170,10 +221,39 @@ export default function NotesPublicProfilePage({ user }) {
                 </Typography>
               )}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {loadingNotes ? "…" : `${notes.length} ${notes.length === 1 ? "PDF" : "PDFs"} hochgeladen`}
-            </Typography>
+            <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                <strong>{followersCount}</strong> {followersCount === 1 ? "Follower" : "Follower"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {loadingNotes ? "…" : `${notes.length} ${notes.length === 1 ? "PDF" : "PDFs"}`}
+              </Typography>
+            </Stack>
           </Box>
+
+          {!isOwnProfile && !loadingProfile && (
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant={isFriend ? "outlined" : "contained"}
+                startIcon={isFriend ? <FiUserCheck /> : <FiUsers />}
+                onClick={handleFriend}
+                disabled={friendLoading}
+                size="small"
+                color={isFriend ? "success" : "primary"}
+              >
+                {isFriend ? "Freund" : "Freund+"}
+              </Button>
+              <Button
+                variant={isFollowing ? "outlined" : "contained"}
+                startIcon={isFollowing ? <FiUserCheck /> : <FiUserPlus />}
+                onClick={handleFollow}
+                disabled={followLoading}
+                size="small"
+              >
+                {isFollowing ? "Gefolgt" : "Folgen"}
+              </Button>
+            </Stack>
+          )}
         </Stack>
 
         {/* PDF-Grid */}

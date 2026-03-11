@@ -120,7 +120,7 @@ export default function NotesAppFullscreen({ user }) {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
       <Stack spacing={2.5}>
         <Box>
           <Typography variant="h5" fontWeight={900}>
@@ -139,7 +139,7 @@ export default function NotesAppFullscreen({ user }) {
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: 2,
+            gap: 1,
           }}
         >
           {filtered.map((n) => (
@@ -177,7 +177,6 @@ export default function NotesAppFullscreen({ user }) {
                     </Box>
 
                     <Stack direction="row" spacing={0.5} sx={{ pr: 2 }}>
-                      {/* PDF öffnen */}
                       <IconButton
                         onClick={async (e) => {
                           e.stopPropagation();
@@ -193,7 +192,6 @@ export default function NotesAppFullscreen({ user }) {
                         <FiFileText />
                       </IconButton>
 
-                      {/* Löschen */}
                       <IconButton
                         onClick={(e) => {
                           e.stopPropagation();
