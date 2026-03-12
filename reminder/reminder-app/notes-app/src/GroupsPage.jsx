@@ -93,12 +93,27 @@ export default function GroupsPage({ user }) {
   };
 
   return (
-    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }} className="page-content">
       <Stack spacing={2.5}>
         {/* Header */}
         <Stack direction="row" alignItems="center">
-          <Typography variant="h5" fontWeight={900} sx={{ flex: 1 }}>Gruppen</Typography>
-          <Button variant="contained" startIcon={<FiPlus />} onClick={openCreate} sx={{ borderRadius: 3 }}>
+          <Typography variant="h5" fontWeight={900} sx={{ flex: 1 }} className="gradient-text">Gruppen</Typography>
+          <Button
+            variant="contained"
+            startIcon={<FiPlus />}
+            onClick={openCreate}
+            sx={{
+              borderRadius: 3,
+              background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
+              boxShadow: "0 4px 14px rgba(124,92,255,.38)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #6a48ff, var(--accent-2))",
+                boxShadow: "0 6px 22px rgba(124,92,255,.52)",
+                transform: "translateY(-2px)",
+              },
+              transition: "transform 180ms var(--ease-spring), box-shadow 220ms ease",
+            }}
+          >
             Neue Gruppe
           </Button>
         </Stack>
@@ -106,27 +121,44 @@ export default function GroupsPage({ user }) {
         {/* List */}
         {loading && <Box sx={{ textAlign: "center", py: 6 }}><CircularProgress /></Box>}
         {!loading && groups.length === 0 && (
-          <Box sx={{
-            textAlign: "center", py: 8,
-            border: "1px dashed", borderColor: "divider", borderRadius: 4,
-          }}>
-            <FiUsers size={36} style={{ opacity: 0.3, marginBottom: 8 }} />
-            <Typography color="text.secondary" fontWeight={600}>Noch keine Gruppen</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <div className="empty-state">
+            <FiUsers size={44} style={{ opacity: 0.22, marginBottom: 16 }} />
+            <Typography fontWeight={700} sx={{ mb: 0.5 }}>Noch keine Gruppen</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Erstelle eine Gruppe und lade Freunde ein.
             </Typography>
-            <Button variant="outlined" onClick={openCreate} sx={{ mt: 2, borderRadius: 3 }}>
+            <Button variant="outlined" onClick={openCreate} sx={{ borderRadius: 3 }}>
               Erste Gruppe erstellen
             </Button>
-          </Box>
+          </div>
         )}
 
         <Stack spacing={1.5}>
-          {groups.map((g) => (
-            <Card key={g.id} sx={{ cursor: "pointer" }} onClick={() => nav(`/groups/${g.id}`)}>
+          {groups.map((g, i) => (
+            <Card
+              key={g.id}
+              className="card-stagger"
+              style={{ ["--i"]: Math.min(i, 8) }}
+              sx={{
+                cursor: "pointer",
+                transition: "transform 280ms var(--ease-spring), box-shadow 280ms ease, border-color 280ms ease",
+                "&:hover": {
+                  transform: "translateY(-4px) scale(1.008)",
+                  boxShadow: "0 24px 64px rgba(0,0,0,.14), 0 0 0 1px rgba(124,92,255,.18)",
+                  borderColor: "rgba(124,92,255,.25)",
+                },
+              }}
+              onClick={() => nav(`/groups/${g.id}`)}
+            >
               <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}>
                 <Stack direction="row" alignItems="center" spacing={2}>
-                  <Avatar sx={{ bgcolor: "primary.main", width: 46, height: 46 }}>
+                  <Avatar
+                    sx={{
+                      background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
+                      boxShadow: "0 4px 12px rgba(124,92,255,.35)",
+                      width: 46, height: 46,
+                    }}
+                  >
                     <FiUsers size={20} />
                   </Avatar>
                   <Box sx={{ flex: 1, minWidth: 0 }}>

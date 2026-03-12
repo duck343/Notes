@@ -173,27 +173,26 @@ export default function NotesSearchPage({ user }) {
   }, [userQuery]);
 
   const renderThumb = (n) => {
-    if (!n.thumbPath) return <Box className="thumb-fallback">Kein Thumbnail</Box>;
+    if (!n.thumbPath) return <div className="thumb-fallback">Kein Thumbnail</div>;
     const thumb = thumbs[n.id];
-    if (!thumb) return <Skeleton variant="rounded" height={220} />;
-    if (thumb === "__error__") return <Box className="thumb-fallback">Thumbnail nicht verfügbar</Box>;
+    if (!thumb) return <Skeleton variant="rectangular" width="100%" height={240} sx={{ display: "block" }} />;
+    if (thumb === "__error__") return <div className="thumb-fallback">Thumbnail nicht verfügbar</div>;
     return (
-      <Box
-        component="img"
+      <img
         src={thumb}
         alt=""
         loading="lazy"
         decoding="async"
         onError={() => setThumbs((p) => ({ ...p, [n.id]: "__error__" }))}
-        sx={{ width: "100%", height: 220, objectFit: "cover", borderRadius: 2, display: "block" }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
       />
     );
   };
 
   return (
-    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }} className="page-content">
       <Stack spacing={2.5}>
-        <Typography variant="h5" fontWeight={900}>Suche</Typography>
+        <Typography variant="h5" fontWeight={900} className="gradient-text">Suche</Typography>
 
         <Tabs value={tab} onChange={(_, v) => setTab(v)}>
           <Tab label="PDFs" />
@@ -228,96 +227,109 @@ export default function NotesSearchPage({ user }) {
 
             {/* Loading skeleton on first load */}
             {loading && notes.length === 0 && (
-              <Box
-                sx={{
+              <div
+                style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                  gap: 1,
+                  gap: 8,
                 }}
               >
                 {Array.from({ length: 6 }).map((_, i) => (
                   <Skeleton key={i} variant="rounded" height={300} />
                 ))}
-              </Box>
+              </div>
             )}
 
-            <Box
-              sx={{
+            <div
+              style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                gap: 1,
+                gap: 8,
               }}
             >
-              {filtered.map((n) => {
+              {filtered.map((n, i) => {
                 const liked = !!(n.likedBy && user?.uid && n.likedBy[user.uid]);
                 return (
-                  <Card key={n.id} sx={{ cursor: "pointer" }}>
-                    <Box role="button" tabIndex={0}>
-                      <CardContent sx={{ p: 0 }}>
-                        <Box onClick={() => nav(`/notes/${n.id}`)}>
-                          {renderThumb(n)}
-                        </Box>
-                        <Box sx={{ minWidth: 0, pl: 2, pt: 1 }}>
-                          <Typography fontWeight={850} noWrap title={n.title || ""}>
-                            {n.title || "Ohne Titel"}
-                          </Typography>
-                          {n.ownerName && (
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              noWrap
-                              onClick={(e) => { e.stopPropagation(); nav(`/user/${n.ownerUid}`); }}
-                              sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
-                            >
-                              Von {n.ownerName}
-                            </Typography>
-                          )}
-                        </Box>
-                        <Stack
-                          direction="row"
-                          alignItems="center"
-                          justifyContent="space-between"
-                          sx={{ px: 2, pb: 1, width: "100%" }}
+                  <div
+                    key={n.id}
+                    className="pdf-card card-stagger"
+                    style={{ ["--i"]: Math.min(i, 8) }}
+                  >
+                    {/* Thumbnail */}
+                    <div
+                      className="pdf-thumb"
+                      onClick={() => nav(`/notes/${n.id}`)}
+                      role="button"
+                      tabIndex={0}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {renderThumb(n)}
+                    </div>
+
+                    {/* Meta */}
+                    <div className="pdf-meta">
+                      <p
+                        className="pdf-title"
+                        title={n.title || ""}
+                        style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >
+                        {n.title || "Ohne Titel"}
+                      </p>
+                      {n.ownerName && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                          onClick={(e) => { e.stopPropagation(); nav(`/user/${n.ownerUid}`); }}
+                          sx={{ cursor: "pointer", display: "block", mb: 0.5, "&:hover": { textDecoration: "underline" } }}
                         >
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Chip size="small" label={n.subject || "Sonstiges"} />
-                            <Stack direction="row" spacing={0.5} alignItems="center">
-                              <IconButton
-                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleLike(n); }}
-                                aria-label="Like"
-                                size="small"
-                              >
-                                <FiHeart style={{ opacity: liked ? 1 : 0.35, color: liked ? "red" : "inherit" }} />
-                              </IconButton>
-                              <Typography variant="body2" color="text.secondary">
-                                {n.likesCount || 0}
-                              </Typography>
-                            </Stack>
+                          Von {n.ownerName}
+                        </Typography>
+                      )}
+                      <div className="pdf-sub">
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Chip size="small" label={n.subject || "Sonstiges"} />
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <IconButton
+                              onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleLike(n); }}
+                              aria-label="Like"
+                              size="small"
+                            >
+                              <FiHeart style={{ opacity: liked ? 1 : 0.35, color: liked ? "red" : "inherit" }} />
+                            </IconButton>
+                            <Typography variant="body2" color="text.secondary">
+                              {n.likesCount || 0}
+                            </Typography>
                           </Stack>
-                          <IconButton
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              try {
-                                const url = await getStorageUrl(n.filePath);
-                                window.open(url, "_blank", "noopener,noreferrer");
-                              } catch (err) {
-                                console.error("PDF öffnen fehlgeschlagen:", err);
-                              }
-                            }}
-                            aria-label="PDF öffnen"
-                          >
-                            <FiFileText />
-                          </IconButton>
                         </Stack>
-                      </CardContent>
-                    </Box>
-                  </Card>
+                        <IconButton
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const url = await getStorageUrl(n.filePath);
+                              window.open(url, "_blank", "noopener,noreferrer");
+                            } catch (err) {
+                              console.error("PDF öffnen fehlgeschlagen:", err);
+                            }
+                          }}
+                          aria-label="PDF öffnen"
+                          size="small"
+                        >
+                          <FiFileText size={16} />
+                        </IconButton>
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
-            </Box>
+            </div>
 
             {!loading && notes.length > 0 && filtered.length === 0 && (
-              <Typography color="text.secondary">Keine PDFs gefunden.</Typography>
+              <div className="empty-state">
+                <FiFileText size={40} style={{ opacity: 0.22, marginBottom: 16 }} />
+                <Typography fontWeight={700} sx={{ mb: 0.5 }}>Keine PDFs gefunden.</Typography>
+                <Typography variant="body2" color="text.secondary">Versuche einen anderen Suchbegriff.</Typography>
+              </div>
             )}
 
             {/* Load more button */}
@@ -358,7 +370,9 @@ export default function NotesSearchPage({ user }) {
             )}
 
             {!userSearching && !userQuery.trim() && popularUsers.length > 0 && (
-              <Typography color="text.secondary">Nutzer</Typography>
+              <Typography color="text.secondary" fontWeight={600} variant="body2">
+                Nutzer
+              </Typography>
             )}
 
             {!userSearching && userQuery.trim() && userResults.length === 0 && (
@@ -366,18 +380,35 @@ export default function NotesSearchPage({ user }) {
             )}
 
             <Stack spacing={1}>
-              {(userQuery.trim() ? userResults : popularUsers).map((u) => {
+              {(userQuery.trim() ? userResults : popularUsers).map((u, i) => {
                 const initials = (u.displayName || "?")
                   .split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
                 return (
                   <Card
                     key={u.uid}
-                    sx={{ cursor: "pointer" }}
+                    className="card-stagger"
+                    style={{ ["--i"]: Math.min(i, 8) }}
+                    sx={{
+                      cursor: "pointer",
+                      transition: "transform 280ms var(--ease-spring), box-shadow 280ms ease, border-color 280ms ease",
+                      "&:hover": {
+                        transform: "translateY(-3px) scale(1.008)",
+                        boxShadow: "0 16px 48px rgba(0,0,0,.12), 0 0 0 1px rgba(124,92,255,.18)",
+                        borderColor: "rgba(124,92,255,.25)",
+                      },
+                    }}
                     onClick={() => nav(`/user/${u.uid}`)}
                   >
                     <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}>
                       <Stack direction="row" alignItems="center" spacing={2} sx={{ width: "100%" }}>
-                        <Avatar src={u.photoURL || undefined} sx={{ width: 44, height: 44 }}>
+                        <Avatar
+                          src={u.photoURL || undefined}
+                          sx={{
+                            width: 44, height: 44,
+                            background: !u.photoURL ? "linear-gradient(135deg, var(--accent), var(--accent-2))" : undefined,
+                            boxShadow: "0 2px 8px rgba(124,92,255,.28)",
+                          }}
+                        >
                           {!u.photoURL && initials}
                         </Avatar>
                         <Box sx={{ flex: 1, minWidth: 0 }}>

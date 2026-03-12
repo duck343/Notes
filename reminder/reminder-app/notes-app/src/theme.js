@@ -12,7 +12,7 @@ export function createAppTheme(mode) {
       error: { main: "#ff4d6d" },
       background: {
         default: dark ? "#0b0c10" : "#f4f5fb",
-        paper: dark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.88)",
+        paper: dark ? "rgba(22, 20, 40, 0.97)" : "rgba(252, 252, 255, 0.97)",
       },
       text: {
         primary: dark ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.87)",
@@ -36,6 +36,84 @@ export function createAppTheme(mode) {
         styleOverrides: { body: {} }, // let index.css handle background
       },
 
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundImage: "none", // remove MUI's default gradient overlay
+            backdropFilter: "blur(24px) saturate(160%)",
+            WebkitBackdropFilter: "blur(24px) saturate(160%)",
+          },
+        },
+      },
+
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            background: dark
+              ? "rgba(22, 20, 40, 0.97)"
+              : "rgba(252, 252, 255, 0.97)",
+            backdropFilter: "blur(28px) saturate(170%)",
+            WebkitBackdropFilter: "blur(28px) saturate(170%)",
+            border: dark
+              ? "1px solid rgba(255,255,255,0.12)"
+              : "1px solid rgba(0,0,0,0.08)",
+            boxShadow: dark
+              ? "0 24px 64px rgba(0,0,0,0.60), 0 4px 12px rgba(0,0,0,0.30)"
+              : "0 24px 64px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08)",
+            borderRadius: 14,
+          },
+          list: {
+            padding: "6px",
+          },
+        },
+      },
+
+      MuiMenuItem: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+            margin: "1px 0",
+            transition: "background 140ms ease",
+          },
+        },
+      },
+
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            background: dark
+              ? "rgba(22, 20, 40, 0.97)"
+              : "rgba(252, 252, 255, 0.97)",
+            backdropFilter: "blur(32px) saturate(170%)",
+            WebkitBackdropFilter: "blur(32px) saturate(170%)",
+            border: dark
+              ? "1px solid rgba(255,255,255,0.12)"
+              : "1px solid rgba(0,0,0,0.08)",
+            boxShadow: dark
+              ? "0 40px 100px rgba(0,0,0,0.70), 0 8px 24px rgba(0,0,0,0.40)"
+              : "0 40px 100px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.10)",
+          },
+        },
+      },
+
+      MuiPopover: {
+        styleOverrides: {
+          paper: {
+            background: dark
+              ? "rgba(22, 20, 40, 0.97)"
+              : "rgba(252, 252, 255, 0.97)",
+            backdropFilter: "blur(28px) saturate(170%)",
+            WebkitBackdropFilter: "blur(28px) saturate(170%)",
+            border: dark
+              ? "1px solid rgba(255,255,255,0.12)"
+              : "1px solid rgba(0,0,0,0.08)",
+            boxShadow: dark
+              ? "0 24px 64px rgba(0,0,0,0.60)"
+              : "0 24px 64px rgba(0,0,0,0.16)",
+          },
+        },
+      },
+
       MuiCard: {
         defaultProps: { elevation: 0 },
         styleOverrides: {
@@ -45,17 +123,20 @@ export function createAppTheme(mode) {
               : "1px solid rgba(0,0,0,0.07)",
             background: dark
               ? "linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))"
-              : "linear-gradient(160deg, rgba(255,255,255,0.96), rgba(255,255,255,0.82))",
+              : "rgba(255,255,255,0.98)",
             backdropFilter: "blur(14px) saturate(160%)",
             WebkitBackdropFilter: "blur(14px) saturate(160%)",
             borderRadius: 18,
+            boxShadow: dark
+              ? "none"
+              : "0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
             transition:
               "transform 260ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms cubic-bezier(.2,.8,.2,1), border-color 260ms",
             "&:hover": {
               transform: "translateY(-5px) scale(1.005)",
               boxShadow: dark
                 ? "0 24px 64px rgba(0,0,0,0.50)"
-                : "0 24px 64px rgba(0,0,0,0.11)",
+                : "0 16px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
               borderColor: "rgba(124,92,255,0.28)",
             },
           },

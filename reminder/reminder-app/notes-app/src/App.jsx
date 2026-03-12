@@ -11,7 +11,7 @@ import { db } from "./firebase";
 
 import {
   FiLogIn, FiLogOut, FiMenu, FiSearch, FiUpload,
-  FiUser, FiUsers, FiHome, FiSun, FiMoon,
+  FiUser, FiUsers, FiHome, FiSun, FiMoon, FiSettings,
 } from "react-icons/fi";
 
 import { auth, googleProvider } from "./firebase";
@@ -25,6 +25,7 @@ import NotesProfilePage from "./NotesProfilePage.jsx";
 import NotesPublicProfilePage from "./NotesPublicProfilePage.jsx";
 import GroupsPage from "./GroupsPage.jsx";
 import GroupChat from "./GroupChat.jsx";
+import NotesSettingsPage from "./NotesSettingsPage.jsx";
 
 import "./styles/global.css";
 import logoFull from "./assets/logoFull.png";
@@ -87,7 +88,9 @@ export default function App() {
           const now = Date.now();
           if (now - (debounceRef.current[doc.id] ?? 0) > 3000) {
             debounceRef.current[doc.id] = now;
-            setGlobalSnack(`💬 ${g.lastSenderName}: ${g.lastMessage} (${g.name})`);
+            if (localStorage.getItem("group-notifs") !== "false") {
+              setGlobalSnack(`💬 ${g.lastSenderName}: ${g.lastMessage} (${g.name})`);
+            }
           }
         } else {
           prevGroupsRef.current[doc.id] = g;
@@ -142,6 +145,7 @@ export default function App() {
             <Route path="/user/:uid" element={user ? <NotesPublicProfilePage user={user} /> : <PleaseLogin />} />
             <Route path="/groups" element={user ? <GroupsPage user={user} /> : <PleaseLogin />} />
             <Route path="/groups/:gid" element={user ? <GroupChat user={user} /> : <PleaseLogin />} />
+            <Route path="/settings" element={user ? <NotesSettingsPage user={user} mode={mode} setMode={setMode} /> : <PleaseLogin />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </div>
@@ -172,6 +176,7 @@ export default function App() {
                 { icon: <FiUpload />, label: "Upload", path: "/upload", accent: true },
                 { icon: <FiUser />, label: "Profil", path: "/profile" },
                 { icon: <FiUsers />, label: "Gruppen", path: "/groups" },
+                { icon: <FiSettings />, label: "Einstellungen", path: "/settings" },
               ].map(({ icon, label, path, accent }) => (
                 <button
                   key={path}
