@@ -43,7 +43,6 @@ export default function NotesSearchPage({ user }) {
   const nav = useNavigate();
   const [tab, setTab] = useState(0);
 
-  // --- PDF-Tab ---
   const [notes, setNotes] = useState([]);
   const [thumbs, setThumbs] = useState({});
   const [search, setSearch] = useState("");
@@ -53,7 +52,6 @@ export default function NotesSearchPage({ user }) {
   const lastDocRef = useRef(null);
   const busyRef = useRef(false);
 
-  // --- Benutzer-Tab ---
   const [userQuery, setUserQuery] = useState("");
   const [userResults, setUserResults] = useState([]);
   const [popularUsers, setPopularUsers] = useState([]);
@@ -81,13 +79,11 @@ export default function NotesSearchPage({ user }) {
     }
   }
 
-  // Initial load
   useEffect(() => {
     lastDocRef.current = null;
     loadNotes(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Thumb-URLs laden
   useEffect(() => {
     notes.forEach((n) => {
       if (!n.thumbPath || thumbs[n.id]) return;
@@ -132,7 +128,6 @@ export default function NotesSearchPage({ user }) {
           });
         }
       });
-      // Optimistic local update
       setNotes((prev) =>
         prev.map((n) => {
           if (n.id !== note.id) return n;
@@ -151,11 +146,9 @@ export default function NotesSearchPage({ user }) {
     }
   };
 
-  // Benutzersuche
   useEffect(() => {
     if (!userQuery.trim()) {
       setUserResults([]);
-      // fetch a larger pool and shuffle for random display
       getAllUsers(200).then((all) => {
         const shuffled = [...all].sort(() => Math.random() - 0.5);
         setPopularUsers(shuffled.slice(0, 10));
@@ -200,7 +193,6 @@ export default function NotesSearchPage({ user }) {
           <Tab label="Benutzer" />
         </Tabs>
 
-        {/* ── PDF-Tab ── */}
         {tab === 0 && (
           <Stack spacing={2.5}>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
@@ -217,6 +209,14 @@ export default function NotesSearchPage({ user }) {
                   label="Fach"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        bgcolor: "rgba(30, 35, 45, 0.98)",
+                        backdropFilter: "blur(10px)",
+                      },
+                    },
+                  }}
                 >
                   <MenuItem value="Alle">Alle</MenuItem>
                   {SUBJECTS.filter((s) => s !== "Alle").map((s) => (
@@ -226,28 +226,15 @@ export default function NotesSearchPage({ user }) {
               </FormControl>
             </Stack>
 
-            {/* Loading skeleton on first load */}
             {loading && notes.length === 0 && (
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                  gap: 1,
-                }}
-              >
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 1 }}>
                 {Array.from({ length: 6 }).map((_, i) => (
                   <Skeleton key={i} variant="rounded" height={300} />
                 ))}
               </Box>
             )}
 
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                gap: 1,
-              }}
-            >
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 1 }}>
               {filtered.map((n) => {
                 const liked = !!(n.likedBy && user?.uid && n.likedBy[user.uid]);
                 return (
@@ -320,7 +307,6 @@ export default function NotesSearchPage({ user }) {
               <Typography color="text.secondary">Keine PDFs gefunden.</Typography>
             )}
 
-            {/* Load more button */}
             {hasMore && notes.length > 0 && (
               <Box sx={{ display: "flex", justifyContent: "center", pt: 1 }}>
                 <Button
@@ -342,7 +328,6 @@ export default function NotesSearchPage({ user }) {
           </Stack>
         )}
 
-        {/* ── Benutzer-Tab ── */}
         {tab === 1 && (
           <Stack spacing={2}>
             <TextField
