@@ -79,9 +79,9 @@ export default function NotesSettingsPage({ user, mode, setMode }) {
   const fileRef = useRef(null);
 
   const [displayName, setDisplayName] = useState(user?.displayName || "");
-  const [savingName, setSavingName]   = useState(false);
+  const [savingName, setSavingName] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [savedMsg, setSavedMsg]       = useState("");
+  const [savedMsg, setSavedMsg] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Notifications preference (local only for now)
@@ -342,6 +342,7 @@ export default function NotesSettingsPage({ user, mode, setMode }) {
 
         {/* ── Info ── */}
         <Section title="Über die App">
+          <Row label="CreatedBy" description="Ekin Yarrak" />
           <Row label="App" description="SkillShare" />
           <Row label="Version" description="0.0.67" last />
         </Section>

@@ -18,6 +18,21 @@ import { getStorage, ref, deleteObject } from "firebase/storage";
 import { db } from "./firebase";
 import { getStorageUrl } from "./notesRepo";
 
+function ThumbPlaceholder() {
+  return (
+    <div className="thumb-fallback">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <line x1="10" y1="9" x2="8" y2="9"/>
+      </svg>
+      <span>Keine Vorschau</span>
+    </div>
+  );
+}
+
 export default function NotesAppFullscreen({ user }) {
   const nav = useNavigate();
   const storage = getStorage();
@@ -73,10 +88,10 @@ export default function NotesAppFullscreen({ user }) {
   };
 
   const renderThumb = (n) => {
-    if (!n.thumbPath) return <div className="thumb-fallback">Kein Thumbnail</div>;
+    if (!n.thumbPath) return <ThumbPlaceholder />;
     const thumb = thumbs[n.id];
     if (!thumb) return <Skeleton variant="rectangular" width="100%" height={240} sx={{ display: "block" }} />;
-    if (thumb === "__error__") return <div className="thumb-fallback">Thumbnail nicht verfügbar</div>;
+    if (thumb === "__error__") return <ThumbPlaceholder />;
     return (
       <img
         src={thumb}
