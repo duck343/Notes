@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 
 import {
   Box,
-  Card,
-  CardContent,
   Chip,
   IconButton,
   Skeleton,
@@ -20,24 +18,36 @@ import { getStorage, ref, deleteObject } from "firebase/storage";
 import { db } from "./firebase";
 import { getStorageUrl } from "./notesRepo";
 
+function ThumbPlaceholder() {
+  return (
+    <div className="thumb-fallback">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <line x1="10" y1="9" x2="8" y2="9"/>
+      </svg>
+      <span>Keine Vorschau</span>
+    </div>
+  );
+}
+
 export default function NotesAppFullscreen({ user }) {
   const nav = useNavigate();
   const storage = getStorage();
 
   const [notes, setNotes] = useState([]);
-  const [thumbs, setThumbs] = useState({}); // id -> url | "__error__"
+  const [thumbs, setThumbs] = useState({});
   const [search, setSearch] = useState("");
 
-  // Notes laden
   useEffect(() => {
     if (!user?.uid) return;
-
     const q = query(
       collection(db, "notes"),
       where("ownerUid", "==", user.uid),
       orderBy("createdAt", "desc")
     );
-
     return onSnapshot(
       q,
       (snap) => setNotes(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
@@ -45,12 +55,9 @@ export default function NotesAppFullscreen({ user }) {
     );
   }, [user?.uid]);
 
-  // Thumb-URLs holen (einfach, ohne Timeout)
   useEffect(() => {
     notes.forEach((n) => {
-      if (!n.thumbPath) return;
-      if (thumbs[n.id]) return; // schon versucht (url oder "__error__")
-
+      if (!n.thumbPath || thumbs[n.id]) return;
       getStorageUrl(n.thumbPath)
         .then((url) => setThumbs((p) => ({ ...p, [n.id]: url })))
         .catch(() => setThumbs((p) => ({ ...p, [n.id]: "__error__" })));
@@ -70,63 +77,39 @@ export default function NotesAppFullscreen({ user }) {
 
   const handleDelete = async (note) => {
     if (!window.confirm(`Willst du "${note.title || "Ohne Titel"}" wirklich löschen?`)) return;
-
     try {
       if (note.filePath) await deleteObject(ref(storage, note.filePath));
       if (note.thumbPath) await deleteObject(ref(storage, note.thumbPath));
       await deleteDoc(doc(db, "notes", note.id));
-
-      // lokalen Cache aufräumen
-      setThumbs((p) => {
-        const copy = { ...p };
-        delete copy[note.id];
-        return copy;
-      });
+      setThumbs((p) => { const c = { ...p }; delete c[note.id]; return c; });
     } catch (err) {
       console.error("Delete fehlgeschlagen:", err);
     }
   };
 
   const renderThumb = (n) => {
-    if (!n.thumbPath) {
-      return <Box className="thumb-fallback">Kein Thumbnail</Box>;
-    }
-
+    if (!n.thumbPath) return <ThumbPlaceholder />;
     const thumb = thumbs[n.id];
-
-    if (!thumb) return <Skeleton variant="rounded" height={220} />;
-
-    if (thumb === "__error__") {
-      return <Box className="thumb-fallback">Thumbnail nicht verfügbar</Box>;
-    }
-
+    if (!thumb) return <Skeleton variant="rectangular" width="100%" height={240} sx={{ display: "block" }} />;
+    if (thumb === "__error__") return <ThumbPlaceholder />;
     return (
-      <Box
-        component="img"
+      <img
         src={thumb}
         alt=""
         loading="lazy"
         decoding="async"
         onError={() => setThumbs((p) => ({ ...p, [n.id]: "__error__" }))}
-        sx={{
-          width: "100%",
-          height: 220,
-          objectFit: "cover",
-          borderRadius: 1,
-          display: "block",
-        }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
       />
     );
   };
 
   return (
-    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ width: "100%", p: { xs: 2, sm: 3 } }} className="page-content">
       <Stack spacing={2.5}>
-        <Box>
-          <Typography variant="h5" fontWeight={900}>
-            Meine PDFs
-          </Typography>
-        </Box>
+        <Typography variant="h5" fontWeight={900} className="gradient-text">
+          Meine PDFs
+        </Typography>
 
         <TextField
           label="Suchen (Titel / Fach)"
@@ -135,49 +118,56 @@ export default function NotesAppFullscreen({ user }) {
           fullWidth
         />
 
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: 1,
-          }}
-        >
-          {filtered.map((n) => (
-            <Card key={n.id} sx={{ cursor: "pointer" }}>
-              <Box
-                onClick={() => nav(`/notes/${n.id}`)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && nav(`/notes/${n.id}`)}
+        {!filtered.length ? (
+          <div className="empty-state">
+            <FiFileText size={44} style={{ opacity: 0.22, marginBottom: 16 }} />
+            <Typography fontWeight={700} sx={{ mb: 0.5 }}>
+              Keine PDFs gefunden
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Lade deine ersten Notizen hoch!
+            </Typography>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: 8,
+            }}
+          >
+            {filtered.map((n, i) => (
+              <div
+                key={n.id}
+                className="pdf-card card-stagger"
+                style={{ ["--i"]: Math.min(i, 8) }}
               >
-                <CardContent sx={{ p: 0 }}>
+                {/* Thumbnail */}
+                <div
+                  className="pdf-thumb"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => nav(`/notes/${n.id}`)}
+                  onKeyDown={(e) => e.key === "Enter" && nav(`/notes/${n.id}`)}
+                  style={{ cursor: "pointer" }}
+                >
                   {renderThumb(n)}
+                </div>
 
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Box sx={{ minWidth: 0, pl: 2, pt: 1}}>
-                      <Typography fontWeight={850} noWrap title={n.title || ""}>
-                        {n.title || "Ohne Titel"}
-                      </Typography>
-
-                      {n.ownerName && (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          noWrap
-                          onClick={(e) => { e.stopPropagation(); nav(`/user/${n.ownerUid}`); }}
-                          sx={{ cursor: "pointer", display: "block", "&:hover": { textDecoration: "underline" } }}
-                        >
-                          Von {n.ownerName}
-                        </Typography>
-                      )}
-
-                      <Stack direction="row" spacing={1} sx={{ mt: 0.7, flexWrap: "wrap" }}>
-                        <Chip size="small" label={n.subject || "Sonstiges"} />
-                      </Stack>
-                    </Box>
-
-                    <Stack direction="row" spacing={0.5} sx={{ pr: 2 }}>
+                {/* Meta */}
+                <div className="pdf-meta">
+                  <p
+                    className="pdf-title"
+                    title={n.title || ""}
+                    style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                  >
+                    {n.title || "Ohne Titel"}
+                  </p>
+                  <div className="pdf-sub">
+                    <Chip size="small" label={n.subject || "Sonstiges"} />
+                    <Stack direction="row" spacing={0.25} alignItems="center">
                       <IconButton
+                        size="small"
                         onClick={async (e) => {
                           e.stopPropagation();
                           try {
@@ -189,30 +179,22 @@ export default function NotesAppFullscreen({ user }) {
                         }}
                         aria-label="PDF öffnen"
                       >
-                        <FiFileText />
+                        <FiFileText size={16} />
                       </IconButton>
-
                       <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(n);
-                        }}
+                        size="small"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(n); }}
                         aria-label="Löschen"
+                        sx={{ color: "error.main", opacity: 0.7, "&:hover": { opacity: 1 } }}
                       >
-                        <FiTrash2 />
+                        <FiTrash2 size={16} />
                       </IconButton>
                     </Stack>
-                  </Stack>
-                </CardContent>
-              </Box>
-            </Card>
-          ))}
-        </Box>
-
-        {!filtered.length && (
-          <Typography color="text.secondary">
-            Keine PDFs gefunden.
-          </Typography>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </Stack>
     </Box>

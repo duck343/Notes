@@ -5,8 +5,6 @@ import {
   Typography,
   Avatar,
   Stack,
-  Card,
-  CardContent,
   Chip,
   IconButton,
   Skeleton,
@@ -25,6 +23,21 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { getStorageUrl, toggleFollow, addFriend, removeFriend, getUserProfile } from "./notesRepo";
+
+function ThumbPlaceholder() {
+  return (
+    <div className="thumb-fallback">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <line x1="10" y1="9" x2="8" y2="9"/>
+      </svg>
+      <span>Keine Vorschau</span>
+    </div>
+  );
+}
 
 export default function NotesPublicProfilePage({ user }) {
   const { uid } = useParams();
@@ -128,18 +141,17 @@ export default function NotesPublicProfilePage({ user }) {
   };
 
   const renderThumb = (n) => {
-    if (!n.thumbPath) return <Box className="thumb-fallback">Kein Thumbnail</Box>;
+    if (!n.thumbPath) return <ThumbPlaceholder />;
     const thumb = thumbs[n.id];
-    if (!thumb) return <Skeleton variant="rounded" height={220} />;
-    if (thumb === "__error__") return <Box className="thumb-fallback">Thumbnail nicht verfügbar</Box>;
+    if (!thumb) return <Skeleton variant="rectangular" width="100%" height={240} sx={{ display: "block" }} />;
+    if (thumb === "__error__") return <ThumbPlaceholder />;
     return (
-      <Box
-        component="img"
+      <img
         src={thumb}
         alt=""
         loading="lazy"
         onError={() => setThumbs((p) => ({ ...p, [n.id]: "__error__" }))}
-        sx={{ width: "100%", height: 220, objectFit: "cover", borderRadius: 1, display: "block" }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
       />
     );
   };
@@ -193,7 +205,7 @@ export default function NotesPublicProfilePage({ user }) {
   };
 
   return (
-    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }} className="page-content">
       <Stack spacing={3}>
         {/* Zurück */}
         <Box>
@@ -203,96 +215,152 @@ export default function NotesPublicProfilePage({ user }) {
           </button>
         </Box>
 
-        {/* Profil-Header */}
-        <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-          {loadingProfile ? (
-            <Skeleton variant="circular" width={72} height={72} />
-          ) : (
-            <Avatar src={profile?.photoURL || undefined} sx={{ width: 72, height: 72, fontSize: 26 }}>
-              {!profile?.photoURL && initials}
-            </Avatar>
-          )}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="h5" fontWeight={900}>
-              {loadingProfile ? <Skeleton width={160} /> : profile?.displayName}
-              {isOwnProfile && (
-                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                  (Du)
-                </Typography>
-              )}
-            </Typography>
-            <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                <strong>{followersCount}</strong> {followersCount === 1 ? "Follower" : "Follower"}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {loadingNotes ? "…" : `${notes.length} ${notes.length === 1 ? "PDF" : "PDFs"}`}
-              </Typography>
-            </Stack>
-          </Box>
-
-          {!isOwnProfile && !loadingProfile && (
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant={isFriend ? "outlined" : "contained"}
-                startIcon={isFriend ? <FiUserCheck /> : <FiUsers />}
-                onClick={handleFriend}
-                disabled={friendLoading}
-                size="small"
-                color={isFriend ? "success" : "primary"}
+        {/* ── Profil-Hero ── */}
+        <div className="profile-hero">
+          <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+            {loadingProfile ? (
+              <Skeleton variant="circular" width={72} height={72} />
+            ) : (
+              <Avatar
+                src={profile?.photoURL || undefined}
+                sx={{
+                  width: 72, height: 72, fontSize: 26,
+                  boxShadow: "0 4px 16px rgba(124,92,255,.32)",
+                  background: !profile?.photoURL
+                    ? "linear-gradient(135deg, var(--accent), var(--accent-2))"
+                    : undefined,
+                }}
               >
-                {isFriend ? "Freund" : "Freund+"}
-              </Button>
-              <Button
-                variant={isFollowing ? "outlined" : "contained"}
-                startIcon={isFollowing ? <FiUserCheck /> : <FiUserPlus />}
-                onClick={handleFollow}
-                disabled={followLoading}
-                size="small"
-              >
-                {isFollowing ? "Gefolgt" : "Folgen"}
-              </Button>
-            </Stack>
-          )}
-        </Stack>
+                {!profile?.photoURL && initials}
+              </Avatar>
+            )}
 
-        {/* PDF-Grid */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="h5" fontWeight={900}>
+                {loadingProfile ? <Skeleton width={160} /> : profile?.displayName}
+                {isOwnProfile && (
+                  <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                    (Du)
+                  </Typography>
+                )}
+              </Typography>
+              <div className="stat-row">
+                <span className="stat-pill">
+                  <strong>{followersCount}</strong>&nbsp;Follower
+                </span>
+                <span className="stat-pill">
+                  <strong>{loadingNotes ? "…" : notes.length}</strong>&nbsp;
+                  {notes.length === 1 ? "PDF" : "PDFs"}
+                </span>
+              </div>
+            </Box>
+
+            {!isOwnProfile && !loadingProfile && (
+              <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                <Button
+                  variant={isFriend ? "outlined" : "contained"}
+                  startIcon={isFriend ? <FiUserCheck /> : <FiUsers />}
+                  onClick={handleFriend}
+                  disabled={friendLoading}
+                  size="small"
+                  color={isFriend ? "success" : "primary"}
+                  sx={!isFriend ? {
+                    background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
+                    "&:hover": {
+                      background: "linear-gradient(135deg, #6a48ff, var(--accent-2))",
+                      transform: "translateY(-1px)",
+                    },
+                    transition: "transform 180ms var(--ease-spring)",
+                  } : {}}
+                >
+                  {isFriend ? "Freund ✓" : "Freund+"}
+                </Button>
+                <Button
+                  variant={isFollowing ? "outlined" : "contained"}
+                  startIcon={isFollowing ? <FiUserCheck /> : <FiUserPlus />}
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                  size="small"
+                  sx={!isFollowing ? {
+                    background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
+                    "&:hover": {
+                      background: "linear-gradient(135deg, #6a48ff, var(--accent-2))",
+                      transform: "translateY(-1px)",
+                    },
+                    transition: "transform 180ms var(--ease-spring)",
+                  } : {}}
+                >
+                  {isFollowing ? "Gefolgt" : "Folgen"}
+                </Button>
+              </Stack>
+            )}
+          </Stack>
+        </div>
+
+        {/* ── PDF-Grid ── */}
         {loadingNotes ? (
-          <Typography color="text.secondary">Lade PDFs…</Typography>
-        ) : notes.length === 0 ? (
-          <Typography color="text.secondary">Noch keine PDFs hochgeladen.</Typography>
-        ) : (
-          <Box
-            sx={{
+          <div
+            style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-              gap: 2,
+              gap: 8,
             }}
           >
-            {notes.map((n) => {
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} variant="rounded" height={300} />
+            ))}
+          </div>
+        ) : notes.length === 0 ? (
+          <div className="empty-state">
+            <FiFileText size={44} style={{ opacity: 0.22, marginBottom: 16 }} />
+            <Typography fontWeight={700} sx={{ mb: 0.5 }}>Noch keine PDFs</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Dieser Nutzer hat noch nichts hochgeladen.
+            </Typography>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: 8,
+            }}
+          >
+            {notes.map((n, i) => {
               const liked = !!(n.likedBy && user?.uid && n.likedBy[user.uid]);
               return (
-                <Card key={n.id} sx={{ cursor: "pointer" }}>
-                  <CardContent sx={{ p: 0 }}>
-                    <Box onClick={() => nav(`/notes/${n.id}`)}>
-                      {renderThumb(n)}
-                    </Box>
-                    <Box sx={{ minWidth: 0, pl: 2, pt: 1 }}>
-                      <Typography fontWeight={850} noWrap title={n.title || ""}>
-                        {n.title || "Ohne Titel"}
-                      </Typography>
-                    </Box>
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{ px: 2, pb: 1 }}
+                <div
+                  key={n.id}
+                  className="pdf-card card-stagger"
+                  style={{ ["--i"]: Math.min(i, 8) }}
+                >
+                  <div
+                    className="pdf-thumb"
+                    onClick={() => nav(`/notes/${n.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {renderThumb(n)}
+                  </div>
+                  <div className="pdf-meta">
+                    <p
+                      className="pdf-title"
+                      title={n.title || ""}
+                      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                     >
+                      {n.title || "Ohne Titel"}
+                    </p>
+                    <div className="pdf-sub">
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Chip size="small" label={n.subject || "Sonstiges"} />
                         <Stack direction="row" spacing={0.5} alignItems="center">
-                          <IconButton onClick={() => toggleLike(n)} size="small" aria-label="Like">
-                            <FiHeart style={{ opacity: liked ? 1 : 0.35, color: liked ? "red" : "white" }} />
+                          <IconButton
+                            onClick={(e) => { e.stopPropagation(); toggleLike(n); }}
+                            size="small"
+                            aria-label="Like"
+                          >
+                            <FiHeart style={{ opacity: liked ? 1 : 0.35, color: liked ? "red" : "inherit" }} />
                           </IconButton>
                           <Typography variant="body2" color="text.secondary">
                             {n.likesCount || 0}
@@ -305,20 +373,19 @@ export default function NotesPublicProfilePage({ user }) {
                           try {
                             const url = await getStorageUrl(n.filePath);
                             window.open(url, "_blank", "noopener,noreferrer");
-                          } catch (err) {
-                            console.error(err);
-                          }
+                          } catch (err) { console.error(err); }
                         }}
                         aria-label="PDF öffnen"
+                        size="small"
                       >
-                        <FiFileText />
+                        <FiFileText size={16} />
                       </IconButton>
-                    </Stack>
-                  </CardContent>
-                </Card>
+                    </div>
+                  </div>
+                </div>
               );
             })}
-          </Box>
+          </div>
         )}
       </Stack>
     </Box>
