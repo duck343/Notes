@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -41,7 +42,20 @@ const PAGE_SIZE = 12;
 
 export default function NotesSearchPage({ user }) {
   const nav = useNavigate();
-  const [tab, setTab] = useState(0);
+  const location = useLocation();
+  const [tab, setTab] = useState(() => {
+  const params = new URLSearchParams(location.search);
+  return params.get("tab") === "users" ? 1 : 0;
+});
+
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  if (params.get("tab") === "users") {
+    setTab(1);
+  } else {
+    setTab(0);
+  }
+}, [location.search]);
 
   const [notes, setNotes] = useState([]);
   const [thumbs, setThumbs] = useState({});
@@ -80,9 +94,11 @@ export default function NotesSearchPage({ user }) {
   }
 
   useEffect(() => {
-    lastDocRef.current = null;
-    loadNotes(true);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (tab !== 0) return; // 👈 WICHTIG
+
+  lastDocRef.current = null;
+  loadNotes(true);
+}, [tab]);// eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     notes.forEach((n) => {
@@ -147,23 +163,31 @@ export default function NotesSearchPage({ user }) {
   };
 
   useEffect(() => {
-    if (!userQuery.trim()) {
-      setUserResults([]);
-      getAllUsers(200).then((all) => {
-        const shuffled = [...all].sort(() => Math.random() - 0.5);
-        setPopularUsers(shuffled.slice(0, 10));
-      }).catch(console.error);
-      return;
-    }
-    setUserSearching(true);
-    const timeout = setTimeout(() => {
-      searchUsersByName(userQuery)
-        .then((results) => setUserResults(results.sort((a, b) => (b.followersCount || 0) - (a.followersCount || 0))))
-        .catch(console.error)
-        .finally(() => setUserSearching(false));
-    }, 400);
-    return () => clearTimeout(timeout);
-  }, [userQuery]);
+  if (tab !== 1) return; // 👈 WICHTIG
+
+  if (!userQuery.trim()) {
+    setUserResults([]);
+    getAllUsers(200).then((all) => {
+      const shuffled = [...all].sort(() => Math.random() - 0.5);
+      setPopularUsers(shuffled.slice(0, 10));
+    }).catch(console.error);
+    return;
+  }
+
+  setUserSearching(true);
+  const timeout = setTimeout(() => {
+    searchUsersByName(userQuery)
+      .then((results) =>
+        setUserResults(
+          results.sort((a, b) => (b.followersCount || 0) - (a.followersCount || 0))
+        )
+      )
+      .catch(console.error)
+      .finally(() => setUserSearching(false));
+  }, 400);
+
+  return () => clearTimeout(timeout);
+}, [userQuery, tab]); // 👈 TAB hinzufügen
 
   const renderThumb = (n) => {
     if (!n.thumbPath) return <Box className="thumb-fallback">Kein Thumbnail</Box>;
@@ -188,10 +212,7 @@ export default function NotesSearchPage({ user }) {
       <Stack spacing={2.5}>
         <Typography variant="h5" fontWeight={900}>Suche</Typography>
 
-        <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-          <Tab label="PDFs" />
-          <Tab label="Benutzer" />
-        </Tabs>
+        
 
         {tab === 0 && (
           <Stack spacing={2.5}>

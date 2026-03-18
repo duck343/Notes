@@ -152,6 +152,7 @@ export default function App() {
                 { icon: <FiUpload />, label: "Upload", path: "/upload", accent: true },
                 { icon: <FiUser />, label: "Profil", path: "/profile" },
                 { icon: <FiUsers />, label: "Gruppen", path: "/groups" },
+                { icon: <FiUsers />, label: "Benutzer", path: "/search?tab=users" },
                 { icon: <FiSettings />, label: "Einstellungen", path: "/settings" },
               ].map(({ icon, label, path, accent }) => (
                 <button
