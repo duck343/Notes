@@ -84,11 +84,27 @@ export default function NotesSingleViewer() {
         <Stack spacing={2}>
           <Card>
             <CardContent>
-              <Typography variant="h5" fontWeight={900}>
+              <Typography
+                variant="h5" fontWeight={900}
+                sx={{ fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}
+              >
                 {note.title || "Ohne Titel"}
               </Typography>
-              <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap" }}>
+              <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: "wrap", alignItems: "center", gap: "6px 10px" }}>
                 <Chip size="small" label={note.subject || "Sonstiges"} />
+                {note.ownerName && (
+                  <Typography variant="caption" color="text.secondary">
+                    von&nbsp;<strong>{note.ownerName}</strong>
+                  </Typography>
+                )}
+                {note.createdAt && (
+                  <Typography variant="caption" color="text.secondary">
+                    ·&nbsp;
+                    {new Date(
+                      note.createdAt.seconds ? note.createdAt.seconds * 1000 : note.createdAt
+                    ).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
+                  </Typography>
+                )}
               </Stack>
             </CardContent>
           </Card>

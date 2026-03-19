@@ -29,6 +29,7 @@ export default function NotesUploadPage({ user }) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
+  const [dragging, setDragging] = useState(false);
 
   const fileLabel = useMemo(() => {
     if (!file) return "Noch keine Datei ausgewählt";
@@ -43,18 +44,26 @@ export default function NotesUploadPage({ user }) {
   function onFileChange(e) {
     const f = e.target.files?.[0] || null;
     setStatus("");
-
-    if (!f) {
-      setFile(null);
-      return;
-    }
+    if (!f) { setFile(null); return; }
     if (!f.name.toLowerCase().endsWith(".pdf")) {
-      setFile(null);
-      e.target.value = "";
-      setStatus("❌ Nur PDF-Dateien sind erlaubt.");
+      setFile(null); e.target.value = "";
+      setStatus("Nur PDF-Dateien sind erlaubt.");
       return;
     }
     setFile(f);
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    setDragging(false);
+    const f = e.dataTransfer.files?.[0] || null;
+    if (!f) return;
+    if (!f.name.toLowerCase().endsWith(".pdf")) {
+      setStatus("Nur PDF-Dateien sind erlaubt.");
+      return;
+    }
+    setFile(f);
+    setStatus("");
   }
 
   async function onSubmit(e) {
@@ -136,45 +145,83 @@ if (!user?.uid) {
                 </FormControl>
               </Stack>
 
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  onChange={onFileChange}
-                  style={{ display: "none" }}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={onFileChange}
+                style={{ display: "none" }}
+              />
+
+              {/* Drop zone */}
+              <Box
+                onClick={pickFile}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                sx={{
+                  border: "2px dashed",
+                  borderColor: dragging ? "primary.main" : file ? "success.main" : "divider",
+                  borderRadius: 3,
+                  p: { xs: 3, sm: 4 },
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1.5,
+                  cursor: busy ? "default" : "pointer",
+                  transition: "border-color 0.2s, background 0.2s",
+                  backgroundColor: dragging
+                    ? "rgba(124,92,255,0.06)"
+                    : file
+                    ? "rgba(46,213,115,0.04)"
+                    : "transparent",
+                  "&:hover": busy ? {} : {
+                    borderColor: "primary.main",
+                    backgroundColor: "rgba(124,92,255,0.04)",
+                  },
+                  pointerEvents: busy ? "none" : "auto",
+                  userSelect: "none",
+                }}
+              >
+                <FiUpload
+                  size={32}
+                  style={{
+                    opacity: dragging ? 1 : 0.4,
+                    color: dragging ? "var(--accent)" : "inherit",
+                    transition: "opacity 0.2s",
+                  }}
                 />
+                {file ? (
+                  <>
+                    <Typography fontWeight={700} sx={{ color: "success.main" }}>
+                      {file.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {Math.round(file.size / 1024).toLocaleString("de-DE")} KB · Klicken zum Ändern
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    <Typography fontWeight={600}>
+                      {dragging ? "Loslassen zum Hochladen" : "PDF hierher ziehen oder klicken"}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Nur PDF-Dateien · max. 50 MB
+                    </Typography>
+                  </>
+                )}
+              </Box>
 
-                <Button
-                  type="button"
-                  variant="outlined"
-                  startIcon={<FiUpload />}
-                  onClick={pickFile}
-                  disabled={busy}
-                  sx={{ whiteSpace: "nowrap" }}
-                >
-                  PDF auswählen
-                </Button>
-
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ flex: 1, minWidth: 0 }}
-                  noWrap
-                  title={fileLabel}
-                >
-                  {fileLabel}
-                </Typography>
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={busy || !file}
-                  sx={{ whiteSpace: "nowrap" }}
-                >
-                  Hochladen
-                </Button>
-              </Stack>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={busy || !file}
+                startIcon={<FiUpload />}
+                sx={{ alignSelf: "flex-end", whiteSpace: "nowrap" }}
+              >
+                Hochladen
+              </Button>
 
               {busy && (
                 <Box>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import {
   Box,
+  Button,
   Chip,
   IconButton,
   Skeleton,
@@ -10,7 +11,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { FiFileText, FiTrash2 } from "react-icons/fi";
+import { FiFileText, FiTrash2, FiUpload } from "react-icons/fi";
 
 import { collection, onSnapshot, orderBy, query, where, deleteDoc, doc } from "firebase/firestore";
 import { getStorage, ref, deleteObject } from "firebase/storage";
@@ -107,9 +108,30 @@ export default function NotesAppFullscreen({ user }) {
   return (
     <Box sx={{ width: "100%", p: { xs: 2, sm: 3 } }} className="page-content">
       <Stack spacing={2.5}>
-        <Typography variant="h5" fontWeight={900} className="gradient-text">
-          Meine PDFs
-        </Typography>
+
+        {/* ── Page header ── */}
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={1.5}>
+          <Box>
+            <Typography
+              variant="h5" fontWeight={900} className="gradient-text"
+              sx={{ fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", mb: 0.25 }}
+            >
+              Meine PDFs
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {notes.length === 0
+                ? "Noch keine PDFs hochgeladen"
+                : `${notes.length} PDF${notes.length !== 1 ? "s" : ""} in deiner Bibliothek`}
+            </Typography>
+          </Box>
+          <Button
+            variant="contained" size="small" startIcon={<FiUpload size={14} />}
+            onClick={() => nav("/upload")}
+            sx={{ borderRadius: 2, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}
+          >
+            PDF hochladen
+          </Button>
+        </Stack>
 
         <TextField
           label="Suchen (Titel / Fach)"
@@ -120,13 +142,21 @@ export default function NotesAppFullscreen({ user }) {
 
         {!filtered.length ? (
           <div className="empty-state">
-            <FiFileText size={44} style={{ opacity: 0.22, marginBottom: 16 }} />
-            <Typography fontWeight={700} sx={{ mb: 0.5 }}>
-              Keine PDFs gefunden
+            <FiUpload size={40} style={{ opacity: 0.25, marginBottom: 16 }} />
+            <Typography fontWeight={800} sx={{ mb: 0.5 }}>
+              {search ? "Keine Ergebnisse" : "Deine Bibliothek ist leer"}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Lade deine ersten Notizen hoch!
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, maxWidth: 320, textAlign: "center" }}>
+              {search
+                ? `Kein PDF passt zu "${search}".`
+                : "Lade deine ersten Notizen als PDF hoch und teile sie mit der Community."}
             </Typography>
+            {!search && (
+              <Button variant="contained" startIcon={<FiUpload size={14} />} onClick={() => nav("/upload")}
+                sx={{ fontWeight: 700, borderRadius: 2 }}>
+                Erstes PDF hochladen
+              </Button>
+            )}
           </div>
         ) : (
           <div

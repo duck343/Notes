@@ -4,34 +4,22 @@ import {
   Card,
   CardContent,
   Stack,
-  TextField,
   Typography,
   Avatar,
   Button,
   CircularProgress,
-  Divider,
 } from "@mui/material";
-import { updateProfile } from "firebase/auth";
-import { FiSave, FiUsers } from "react-icons/fi";
+import { FiUsers } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { auth } from "./firebase";
-import { getUserProfile, setUserProfile, getFriends, removeFriend } from "./notesRepo";
+import { getUserProfile, getFriends, removeFriend } from "./notesRepo";
 
 export default function NotesProfilePage({ user }) {
   const nav = useNavigate();
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState("");
   const [friends, setFriends] = useState([]);
   const [removingUid, setRemovingUid] = useState(null);
 
   useEffect(() => {
     if (!user?.uid) return;
-    getUserProfile(user.uid)
-      .then((profile) => setName(profile?.displayName || user.displayName || ""))
-      .catch(() => setName(user.displayName || ""))
-      .finally(() => setLoading(false));
     getFriends(user.uid).then(setFriends).catch(console.error);
   }, [user?.uid]);
 
@@ -44,29 +32,8 @@ export default function NotesProfilePage({ user }) {
     finally { setRemovingUid(null); }
   }
 
-  const handleSave = async () => {
-    if (!user?.uid) return;
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setStatus("❌ Name darf nicht leer sein.");
-      return;
-    }
-
-    setSaving(true);
-    setStatus("");
-    try {
-      await setUserProfile(user.uid, { displayName: trimmed, photoURL: user.photoURL || null });
-      await updateProfile(auth.currentUser, { displayName: trimmed });
-      setStatus("✅ Profil gespeichert!");
-    } catch (err) {
-      console.error(err);
-      setStatus("❌ Speichern fehlgeschlagen.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const initials = (name || user?.displayName || "?")
+  const name = user?.displayName || "";
+  const initials = (name || "?")
     .split(" ")
     .map((w) => w[0])
     .slice(0, 2)
@@ -76,9 +43,35 @@ export default function NotesProfilePage({ user }) {
   return (
     <Box sx={{ width: "100%", mx: "auto", p: { xs: 2, sm: 3 } }}>
       <Stack spacing={2.5}>
-        <Typography variant="h5" fontWeight={900}>
-          Mein Profil
-        </Typography>
+
+        {/* ── Profile hero ── */}
+        <div className="profile-hero">
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5} alignItems={{ xs: "flex-start", sm: "center" }}>
+            <Avatar
+              src={user?.photoURL || undefined}
+              sx={{ width: 80, height: 80, fontSize: 28, flexShrink: 0, border: "2.5px solid rgba(124,92,255,0.35)" }}
+            >
+              {!user?.photoURL && initials}
+            </Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="h5" fontWeight={900}
+                sx={{ fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", mb: 0.25 }}
+                noWrap
+              >
+                {name || user?.displayName || "Dein Profil"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                {user?.email}&ensp;·&ensp;Google-Konto
+              </Typography>
+              <div className="stat-row">
+                <span className="stat-pill">
+                  <strong>{friends.length}</strong>&nbsp;Freunde
+                </span>
+              </div>
+            </Box>
+          </Stack>
+        </div>
 
         {/* Friends list */}
         <Card>
@@ -125,58 +118,6 @@ export default function NotesProfilePage({ user }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
-            <Stack spacing={3}>
-              {/* Avatar + E-Mail */}
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar
-                  src={user?.photoURL || undefined}
-                  sx={{ width: 72, height: 72, fontSize: 26 }}
-                >
-                  {!user?.photoURL && initials}
-                </Avatar>
-                <Box>
-                  <Typography fontWeight={700}>{user?.email}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Google-Konto
-                  </Typography>
-                </Box>
-              </Stack>
-
-              {/* Name-Feld */}
-              {loading ? (
-                <CircularProgress size={24} />
-              ) : (
-                <TextField
-                  label="Anzeigename"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setStatus("");
-                  }}
-                  disabled={saving}
-                  fullWidth
-                  helperText="Dieser Name wird bei deinen PDFs angezeigt."
-                />
-              )}
-
-              <Button
-                variant="contained"
-                startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <FiSave />}
-                onClick={handleSave}
-                disabled={saving || loading}
-                sx={{ alignSelf: "flex-start" }}
-              >
-                Speichern
-              </Button>
-
-              {status && (
-                <Typography variant="body2">{status}</Typography>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
       </Stack>
     </Box>
   );

@@ -785,23 +785,19 @@ function PleaseLogin() {
         </div>
       </section>
 
-      {/* ── STATS ── */}
-      <div className="landing-rule" />
-      <section className="landing-section" style={{ position: "relative" }}>
-        <div className="landing-stat-grid">
-          {stats.map((s, i) => <StatCard key={s.label} {...s} index={i} />)}
-        </div>
-      </section>
+      {/* ── STATS: strip, no cards ── */}
+      <div className="stats-strip">
+        {stats.map((s, i) => <StatCard key={s.label} {...s} index={i} />)}
+      </div>
 
-      {/* ── FEATURES ── */}
-      <div className="landing-rule" />
+      {/* ── FEATURES: bento grid ── */}
       <section className="landing-section" style={{ position: "relative" }}>
         <div className="landing-section-header reveal">
           <p className="landing-eyebrow">Features</p>
           <ScrambleHeading className="landing-h2" plain="Alles, was du zum" gradient="Lernen brauchst" />
           <p className="landing-muted">Eine Plattform. Alle Tools. Gemacht für Schüler.</p>
         </div>
-        <div className="landing-features-grid">
+        <div className="features-bento">
           {features.map(({ icon, label, desc, bg, color }, i) => (
             <TiltCard key={label} cardGlow={bg} index={i}>
               <div className="landing-feature-icon" style={{ background: bg, color }}>{icon}</div>
@@ -812,20 +808,16 @@ function PleaseLogin() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <div className="landing-rule" />
+      {/* ── HOW IT WORKS: staggered with big numbers ── */}
       <section className="landing-section" style={{ position: "relative" }}>
         <div className="landing-section-header reveal">
           <p className="landing-eyebrow">Wie es funktioniert</p>
           <ScrambleHeading className="landing-h2" plain="In 3 Schritten zum" gradient="Lernerfolg" />
         </div>
         <div className="landing-steps">
-          {steps.map(({ num, icon, title, desc, bg, accent }, i) => (
+          {steps.map(({ num, title, desc }, i) => (
             <div key={num} className={`landing-step reveal stagger-${i + 1}`}>
-              <div className="landing-step-icon" style={{ background: bg, border: `1px solid ${accent}40` }}>
-                <span style={{ fontSize: 28, color: accent, display: "flex" }}>{icon}</span>
-                <div className="landing-step-badge" style={{ background: accent }}>{num}</div>
-              </div>
+              <span className="step-num-display">0{num}</span>
               <div className="landing-step-title">{title}</div>
               <p className="landing-step-desc">{desc}</p>
             </div>
@@ -833,14 +825,14 @@ function PleaseLogin() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* ── CTA: left-aligned ── */}
       <section className="landing-section landing-section--last">
         <div className="landing-cta-box reveal">
           <ScrambleHeading className="landing-h2" plain="Bereit zum" gradient="Wissens-Teilen?" />
-          <p className="landing-muted" style={{ margin: "10px auto 28px", maxWidth: 380 }}>
+          <p className="landing-muted">
             Kein Abo, keine Kreditkarte – einfach mit Google anmelden und loslegen.
           </p>
-          <MagneticButton style={{ margin: "0 auto" }} onClick={() => signInWithPopup(auth, googleProvider)}>
+          <MagneticButton onClick={() => signInWithPopup(auth, googleProvider)}>
             {GOOGLE_ICON}
             Mit Google anmelden
           </MagneticButton>
