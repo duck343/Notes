@@ -12,6 +12,7 @@ import { db } from "./firebase";
 import {
   FiLogIn, FiLogOut, FiMenu, FiSearch, FiUpload,
   FiUser, FiUsers, FiHome, FiSun, FiMoon, FiSettings,
+  FiHeart, FiMessageSquare, FiBookOpen, FiZap,
 } from "react-icons/fi";
 
 import { auth, googleProvider } from "./firebase";
@@ -360,6 +361,306 @@ const GOOGLE_ICON = (
   </svg>
 );
 
+// ─── FloatingParticles ────────────────────────────────────────────────────────
+
+function FloatingParticles({ count = 42 }) {
+  const particles = useMemo(() => {
+    const colors = [
+      "rgba(124,92,255,0.7)",
+      "rgba(38,198,255,0.6)",
+      "rgba(255,107,219,0.55)",
+    ];
+    return Array.from({ length: count }, (_, i) => ({
+      id: i,
+      left: `${((i / count) * 100 + Math.sin(i * 2.4) * 5).toFixed(2)}%`,
+      size: 1.8 + Math.abs(Math.sin(i * 1.8)) * 3.5,
+      delay: (i * 0.31) % 10,
+      duration: 6 + (i % 9) * 1.1,
+      drift: Math.sin(i * 2.1) * 80,
+      color: colors[i % colors.length],
+    }));
+  }, [count]);
+
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 1 }}>
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          style={{
+            position: "absolute",
+            bottom: "-8px",
+            left: p.left,
+            width: p.size,
+            height: p.size,
+            borderRadius: "50%",
+            background: p.color,
+            boxShadow: `0 0 ${p.size * 4}px ${p.color}`,
+            animation: `particleFloat ${p.duration}s ${p.delay}s ease-in-out infinite`,
+            "--drift": `${p.drift}px`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── PageSpotlight ────────────────────────────────────────────────────────────
+
+function PageSpotlight() {
+  const [pos, setPos] = useState({ x: -999, y: -999 });
+  useEffect(() => {
+    function onMove(e) { setPos({ x: e.clientX, y: e.clientY }); }
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+  return (
+    <div style={{
+      position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1,
+      background: `radial-gradient(420px circle at ${pos.x}px ${pos.y}px, rgba(124,92,255,0.05), transparent 65%)`,
+    }} />
+  );
+}
+
+// ─── useTypewriter ────────────────────────────────────────────────────────────
+
+function useTypewriter(phrases, typingSpeed = 72, pauseMs = 2200, deletingSpeed = 32) {
+  const [text, setText]         = useState("");
+  const [idx, setIdx]           = useState(0);
+  const [charIdx, setCharIdx]   = useState(0);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const current = phrases[idx];
+    if (!deleting && charIdx < current.length) {
+      const t = setTimeout(() => { setText(current.slice(0, charIdx + 1)); setCharIdx((c) => c + 1); }, typingSpeed + Math.random() * 28);
+      return () => clearTimeout(t);
+    }
+    if (!deleting && charIdx === current.length) {
+      const t = setTimeout(() => setDeleting(true), pauseMs);
+      return () => clearTimeout(t);
+    }
+    if (deleting && charIdx > 0) {
+      const t = setTimeout(() => { setText(current.slice(0, charIdx - 1)); setCharIdx((c) => c - 1); }, deletingSpeed);
+      return () => clearTimeout(t);
+    }
+    if (deleting && charIdx === 0) { setDeleting(false); setIdx((i) => (i + 1) % phrases.length); }
+  }, [charIdx, deleting, idx]); // eslint-disable-line
+
+  return text;
+}
+
+// ─── useCountUp ──────────────────────────────────────────────────────────────
+
+function useCountUp(end, isActive, duration = 1600) {
+  const [count, setCount] = useState(0);
+  const rafRef = useRef(null);
+  useEffect(() => {
+    if (!isActive || end === null) return;
+    let startTime = null;
+    function step(ts) {
+      if (!startTime) startTime = ts;
+      const progress = Math.min((ts - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(eased * end));
+      if (progress < 1) rafRef.current = requestAnimationFrame(step);
+    }
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [isActive, end, duration]);
+  return count;
+}
+
+// ─── useTilt ─────────────────────────────────────────────────────────────────
+
+function useTilt(strength = 9) {
+  const ref = useRef(null);
+  const [tiltStyle, setTiltStyle] = useState({});
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    function onMove(e) {
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      setTiltStyle({
+        transform: `perspective(700px) rotateX(${(y - 0.5) * -strength}deg) rotateY(${(x - 0.5) * strength}deg) scale(1.03)`,
+        transition: "transform 80ms linear",
+        "--shine-x": `${x * 100}%`,
+        "--shine-y": `${y * 100}%`,
+      });
+    }
+    function onLeave() {
+      setTiltStyle({ transform: "perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)", transition: "transform 500ms var(--ease-out)" });
+    }
+    el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseleave", onLeave);
+    return () => { el.removeEventListener("mousemove", onMove); el.removeEventListener("mouseleave", onLeave); };
+  }, [strength]);
+  return [ref, tiltStyle];
+}
+
+// ─── useMagnet ───────────────────────────────────────────────────────────────
+
+function useMagnet(strength = 0.42) {
+  const ref    = useRef(null);
+  const target = useRef({ x: 0, y: 0 });
+  const cur    = useRef({ x: 0, y: 0 });
+  const rafRef = useRef(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    function animate() {
+      cur.current.x += (target.current.x - cur.current.x) * 0.14;
+      cur.current.y += (target.current.y - cur.current.y) * 0.14;
+      setOffset({ x: cur.current.x, y: cur.current.y });
+      rafRef.current = requestAnimationFrame(animate);
+    }
+    rafRef.current = requestAnimationFrame(animate);
+    function onMove(e) {
+      const r = el.getBoundingClientRect();
+      target.current = { x: (e.clientX - (r.left + r.width / 2)) * strength, y: (e.clientY - (r.top + r.height / 2)) * strength };
+    }
+    function onLeave() { target.current = { x: 0, y: 0 }; }
+    el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseleave", onLeave);
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseleave", onLeave);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [strength]);
+  return [ref, offset];
+}
+
+// ─── useScramble ─────────────────────────────────────────────────────────────
+
+function useScramble(text, isActive) {
+  const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const [display, setDisplay] = useState(text);
+  useEffect(() => {
+    if (!isActive) return;
+    let frame = 0;
+    const total = text.length * 2.8;
+    let raf;
+    function update() {
+      frame++;
+      const revealed = Math.floor((frame / total) * text.length);
+      setDisplay(text.split("").map((ch, i) => {
+        if (i < revealed || ch === " ") return ch;
+        return CHARS[Math.floor(Math.random() * CHARS.length)];
+      }).join(""));
+      if (frame < total) raf = requestAnimationFrame(update);
+      else setDisplay(text);
+    }
+    raf = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(raf);
+  }, [isActive, text]); // eslint-disable-line
+  return display;
+}
+
+// ─── useScrollReveal ─────────────────────────────────────────────────────────
+
+function useScrollReveal() {
+  useEffect(() => {
+    const els = document.querySelectorAll(".reveal, .reveal-scale");
+    if (!els.length) return;
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add("visible"); }),
+      { threshold: 0.08, rootMargin: "0px 0px -24px 0px" }
+    );
+    els.forEach((el) => io.observe(el));
+    const steps = document.querySelector(".landing-steps");
+    if (steps) {
+      const stepsIO = new IntersectionObserver(([e]) => { if (e.isIntersecting) e.target.classList.add("steps-in"); }, { threshold: 0.2 });
+      stepsIO.observe(steps);
+      return () => { io.disconnect(); stepsIO.disconnect(); };
+    }
+    return () => io.disconnect();
+  }, []);
+}
+
+// ─── TiltCard ────────────────────────────────────────────────────────────────
+
+function TiltCard({ children, className, cardGlow, index }) {
+  const [ref, tiltStyle] = useTilt(9);
+  return (
+    <div
+      ref={ref}
+      className={`landing-feature-item reveal stagger-${index + 1}`}
+      style={{ "--card-glow": cardGlow, ...tiltStyle }}
+    >
+      <div className="tilt-shine" />
+      {children}
+    </div>
+  );
+}
+
+// ─── ScrambleHeading ─────────────────────────────────────────────────────────
+
+function ScrambleHeading({ plain, gradient, className }) {
+  const ref = useRef(null);
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setActive(true); io.disconnect(); } }, { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const scrambled = useScramble(plain, active);
+  return (
+    <h2 ref={ref} className={className}>
+      {scrambled}{" "}
+      {gradient && <span className="gradient-text">{gradient}</span>}
+    </h2>
+  );
+}
+
+// ─── StatCard ────────────────────────────────────────────────────────────────
+
+function StatCard({ value, label, sub, index }) {
+  const ref = useRef(null);
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setActive(true); io.disconnect(); } }, { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const match  = String(value).match(/^([\d.]+)(.*)/);
+  const rawNum = match ? parseFloat(match[1].replace(/\./g, "")) : null;
+  const suffix = match ? match[2] : "";
+  const count  = useCountUp(rawNum, active);
+  const formatted = rawNum !== null ? count.toLocaleString("de-AT") + suffix : value;
+  return (
+    <div ref={ref} className={`landing-stat-card reveal-scale stagger-${index + 1}`}>
+      <div className="landing-stat-value">{formatted}</div>
+      <div className="landing-stat-label">{label}</div>
+      <div className="landing-stat-sub">{sub}</div>
+    </div>
+  );
+}
+
+// ─── MagneticButton ──────────────────────────────────────────────────────────
+
+function MagneticButton({ children, style, onClick, wrapClass }) {
+  const [ref, offset] = useMagnet(0.42);
+  return (
+    <div ref={ref} className={`login-google-btn-wrap${wrapClass ? " " + wrapClass : ""}`} style={style}>
+      <button
+        className="login-google-btn"
+        onClick={onClick}
+        style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
+      >
+        {children}
+      </button>
+    </div>
+  );
+}
+
 // ─── PleaseLogin ──────────────────────────────────────────────────────────────
 
 function PleaseLogin() {
@@ -368,35 +669,31 @@ function PleaseLogin() {
   const cursorRef    = useRef(null);
 
   useWebGLDistortion(canvasRef, containerRef);
+  useScrollReveal();
+
+  const tw = useTypewriter(["geteilt.", "entdeckt.", "gelernt.", "gemeinsam."]);
 
   // smooth custom cursor
   useEffect(() => {
     const container = containerRef.current;
     const cursorEl  = cursorRef.current;
     if (!container || !cursorEl) return;
-
     let raf;
     let cx = -100, cy = -100, tx = -100, ty = -100;
-
     function onMove(e) {
       const r = container.getBoundingClientRect();
-      tx = e.clientX - r.left;
-      ty = e.clientY - r.top;
+      tx = e.clientX - r.left; ty = e.clientY - r.top;
       cursorEl.style.opacity = "1";
     }
     function onLeave() { cursorEl.style.opacity = "0"; }
-
     function animate() {
       raf = requestAnimationFrame(animate);
-      cx += (tx - cx) * 0.12;
-      cy += (ty - cy) * 0.12;
+      cx += (tx - cx) * 0.12; cy += (ty - cy) * 0.12;
       cursorEl.style.transform = `translate(${cx}px, ${cy}px) translate(-50%, -50%)`;
     }
-
     container.addEventListener("mousemove", onMove);
     container.addEventListener("mouseleave", onLeave);
     animate();
-
     return () => {
       cancelAnimationFrame(raf);
       container.removeEventListener("mousemove", onMove);
@@ -408,148 +705,125 @@ function PleaseLogin() {
     { value: "10.000+", label: "Aktive Nutzer",  sub: "Schüler & Studenten" },
     { value: "5.000+",  label: "PDFs geteilt",   sub: "Aus allen Fächern"   },
     { value: "150+",    label: "Schulen",         sub: "Österreich & DE"     },
-    { value: "4.9 ★",  label: "Bewertung",       sub: "Durchschnitt"        },
+    { value: "4,9",     label: "Bewertung",       sub: "von 5,0 Sternen"     },
   ];
 
   const features = [
-    { icon: "📄", label: "PDFs hochladen",  desc: "Teile deine Mitschriften und Zusammenfassungen schnell mit der Community.",        bg: "rgba(124,92,255,.12)"  },
-    { icon: "🔍", label: "Entdecken",       desc: "Suche nach Fächern, Themen oder Schlagwörtern – finde sofort passendes Material.", bg: "rgba(38,198,255,.10)"  },
-    { icon: "💬", label: "Gruppen-Chat",    desc: "Erstelle Lerngruppen, tausche dich aus und sende Dateien direkt in Echtzeit.",     bg: "rgba(61,220,151,.10)"  },
-    { icon: "❤️", label: "Liken & Folgen", desc: "Unterstütze andere mit Likes und folge Nutzern, die gute Inhalte teilen.",         bg: "rgba(255,107,138,.10)" },
-    { icon: "👥", label: "Community",       desc: "Verbinde dich mit Mitschülern, füge Freunde hinzu und bau dein Lern-Netzwerk auf.",bg: "rgba(255,209,102,.10)" },
-    { icon: "📚", label: "Alle Fächer",     desc: "Von Mathe bis Geschichte – SkillShare deckt alle Schulfächer ab.",                 bg: "rgba(180,125,255,.12)" },
+    { icon: <FiUpload />,        label: "PDFs hochladen",  desc: "Teile deine Mitschriften und Zusammenfassungen schnell mit der Community.",        bg: "rgba(124,92,255,.13)",  color: "#7c5cff" },
+    { icon: <FiSearch />,        label: "Entdecken",       desc: "Suche nach Fächern, Themen oder Schlagwörtern – finde sofort passendes Material.", bg: "rgba(38,198,255,.11)",  color: "#26c6ff" },
+    { icon: <FiMessageSquare />, label: "Gruppen-Chat",    desc: "Erstelle Lerngruppen, tausche dich aus und sende Dateien direkt in Echtzeit.",     bg: "rgba(61,220,151,.11)",  color: "#3ddc97" },
+    { icon: <FiHeart />,         label: "Liken & Folgen",  desc: "Unterstütze andere mit Likes und folge Nutzern, die gute Inhalte teilen.",         bg: "rgba(255,107,138,.11)", color: "#ff6b8a" },
+    { icon: <FiUsers />,         label: "Community",       desc: "Verbinde dich mit Mitschülern, füge Freunde hinzu und bau dein Lern-Netzwerk auf.",bg: "rgba(255,209,102,.11)", color: "#ffd166" },
+    { icon: <FiBookOpen />,      label: "Alle Fächer",     desc: "Von Mathe bis Geschichte – SkillShare deckt alle Schulfächer ab.",                 bg: "rgba(180,125,255,.13)", color: "#b47dff" },
   ];
 
   const steps = [
-    { num: "1", emoji: "⬆️", title: "Notizen hochladen",  desc: "Exportiere deine Notizen als PDF und lade sie in Sekunden hoch.",                      bg: "rgba(124,92,255,.13)", accent: "var(--accent)"  },
-    { num: "2", emoji: "🔎", title: "Entdecken & lernen", desc: "Durchsuche tausende PDFs deiner Mitschüler – sortiert nach Fach und Relevanz.",          bg: "rgba(38,198,255,.11)", accent: "var(--accent-2)" },
-    { num: "3", emoji: "🎓", title: "Zusammen wachsen",   desc: "Tritt Lerngruppen bei, chatte mit anderen und hilf zurück – wer teilt, lernt doppelt.", bg: "rgba(61,220,151,.10)", accent: "#3ddc97"        },
+    { num: "1", icon: <FiUpload />, title: "Notizen hochladen",  desc: "Exportiere deine Notizen als PDF und lade sie in Sekunden hoch.",                      bg: "rgba(124,92,255,.13)", accent: "var(--accent)"  },
+    { num: "2", icon: <FiSearch />, title: "Entdecken & lernen", desc: "Durchsuche tausende PDFs deiner Mitschüler – sortiert nach Fach und Relevanz.",          bg: "rgba(38,198,255,.11)", accent: "var(--accent-2)" },
+    { num: "3", icon: <FiZap />,    title: "Zusammen wachsen",   desc: "Tritt Lerngruppen bei, chatte mit anderen und hilf zurück – wer teilt, lernt doppelt.", bg: "rgba(61,220,151,.10)", accent: "#3ddc97"        },
   ];
 
   return (
     <div className="landing-page">
+      <PageSpotlight />
 
-      {/* ── HERO mit WebGL Distortion ── */}
+      {/* ── HERO ── */}
       <section
         ref={containerRef}
         className="landing-hero landing-hero--webgl"
         style={{ position: "relative", cursor: "none", overflow: "hidden" }}
       >
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            display: "block",
-            pointerEvents: "none",
-          }}
-        />
+        <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block", pointerEvents: "none" }} />
+        <FloatingParticles count={42} />
 
-        {/* Custom cursor ring */}
-        <div
-          ref={cursorRef}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: 28,
-            height: 28,
-            border: "1.5px solid rgba(124,92,255,0.9)",
-            borderRadius: "50%",
-            pointerEvents: "none",
-            opacity: 0,
-            transition: "opacity 0.2s",
-            mixBlendMode: "screen",
-            zIndex: 10,
-          }}
-        />
+        <div ref={cursorRef} style={{
+          position: "absolute", top: 0, left: 0, width: 30, height: 30,
+          border: "1.5px solid rgba(124,92,255,0.95)", borderRadius: "50%",
+          pointerEvents: "none", opacity: 0, transition: "opacity 0.2s",
+          mixBlendMode: "screen", zIndex: 10,
+        }} />
 
         <div className="landing-hero-inner page-content" style={{ position: "relative", zIndex: 2 }}>
-          <div className="landing-badge">✨ Kostenlos für Schüler &amp; Studenten</div>
+          <div className="landing-badge hero-item">Kostenlos für Schüler &amp; Studenten</div>
 
-          <h1 className="landing-tagline">
-            Dein Wissen.<br />
-            <span className="gradient-text">Geteilt. Entdeckt. Gelernt.</span>
+          <h1 className="landing-tagline hero-item">
+            <span className="word-reveal-wrap"><span className="word-reveal" style={{ animationDelay: "180ms" }}>Dein</span></span>{" "}
+            <span className="word-reveal-wrap"><span className="word-reveal" style={{ animationDelay: "280ms" }}>Wissen,</span></span>
+            <br />
+            <span className="gradient-text">
+              {tw || "\u00A0"}
+              <span className="typewriter-cursor" />
+            </span>
           </h1>
 
-          <p className="landing-subtitle">
+          <p className="landing-subtitle hero-item">
             SkillShare ist die Plattform, auf der Schüler ihre Notizen als PDFs teilen,
             voneinander lernen und in Gruppen zusammenarbeiten – alles an einem Ort.
           </p>
 
-          <button
-            className="login-google-btn"
-            onClick={() => signInWithPopup(auth, googleProvider)}
-          >
+          <MagneticButton wrapClass="hero-item" onClick={() => signInWithPopup(auth, googleProvider)}>
             {GOOGLE_ICON}
             Mit Google anmelden
-          </button>
+          </MagneticButton>
 
-          <p className="login-legal">
+          <p className="login-legal hero-item">
             Durch die Anmeldung stimmst du den Nutzungsbedingungen zu.
           </p>
 
-          <div className="landing-social-proof">
-            <span>👥 10.000+ Nutzer</span>
+          <div className="landing-social-proof hero-item">
+            <span>10.000+ Nutzer</span>
             <span className="landing-divider-v" />
-            <span>⭐ 4.9 Bewertung</span>
+            <span>4,9 / 5 Bewertung</span>
             <span className="landing-divider-v" />
             <span>5.000+ PDFs geteilt</span>
           </div>
+        </div>
+
+        <div className="scroll-indicator">
+          <div className="scroll-indicator-line" />
+          <div className="scroll-indicator-dot" />
         </div>
       </section>
 
       {/* ── STATS ── */}
       <div className="landing-rule" />
-      <section className="landing-section">
+      <section className="landing-section" style={{ position: "relative" }}>
         <div className="landing-stat-grid">
-          {stats.map((s) => (
-            <div key={s.label} className="landing-stat-card">
-              <div className="landing-stat-value">{s.value}</div>
-              <div className="landing-stat-label">{s.label}</div>
-              <div className="landing-stat-sub">{s.sub}</div>
-            </div>
-          ))}
+          {stats.map((s, i) => <StatCard key={s.label} {...s} index={i} />)}
         </div>
       </section>
 
       {/* ── FEATURES ── */}
       <div className="landing-rule" />
-      <section className="landing-section">
-        <div className="landing-section-header">
+      <section className="landing-section" style={{ position: "relative" }}>
+        <div className="landing-section-header reveal">
           <p className="landing-eyebrow">Features</p>
-          <h2 className="landing-h2">
-            Alles, was du zum <span className="gradient-text">Lernen brauchst</span>
-          </h2>
+          <ScrambleHeading className="landing-h2" plain="Alles, was du zum" gradient="Lernen brauchst" />
           <p className="landing-muted">Eine Plattform. Alle Tools. Gemacht für Schüler.</p>
         </div>
         <div className="landing-features-grid">
-          {features.map(({ icon, label, desc, bg }) => (
-            <div key={label} className="landing-feature-item">
-              <div className="landing-feature-icon" style={{ background: bg }}>{icon}</div>
+          {features.map(({ icon, label, desc, bg, color }, i) => (
+            <TiltCard key={label} cardGlow={bg} index={i}>
+              <div className="landing-feature-icon" style={{ background: bg, color }}>{icon}</div>
               <div className="landing-feature-title">{label}</div>
               <p className="landing-feature-desc">{desc}</p>
-            </div>
+            </TiltCard>
           ))}
         </div>
       </section>
 
       {/* ── HOW IT WORKS ── */}
       <div className="landing-rule" />
-      <section className="landing-section">
-        <div className="landing-section-header">
+      <section className="landing-section" style={{ position: "relative" }}>
+        <div className="landing-section-header reveal">
           <p className="landing-eyebrow">Wie es funktioniert</p>
-          <h2 className="landing-h2">
-            In 3 Schritten zum <span className="gradient-text">Lernerfolg</span>
-          </h2>
+          <ScrambleHeading className="landing-h2" plain="In 3 Schritten zum" gradient="Lernerfolg" />
         </div>
         <div className="landing-steps">
-          {steps.map(({ num, emoji, title, desc, bg, accent }) => (
-            <div key={num} className="landing-step">
+          {steps.map(({ num, icon, title, desc, bg, accent }, i) => (
+            <div key={num} className={`landing-step reveal stagger-${i + 1}`}>
               <div className="landing-step-icon" style={{ background: bg, border: `1px solid ${accent}40` }}>
-                <span style={{ fontSize: 30 }}>{emoji}</span>
+                <span style={{ fontSize: 28, color: accent, display: "flex" }}>{icon}</span>
                 <div className="landing-step-badge" style={{ background: accent }}>{num}</div>
               </div>
               <div className="landing-step-title">{title}</div>
@@ -561,27 +835,21 @@ function PleaseLogin() {
 
       {/* ── CTA ── */}
       <section className="landing-section landing-section--last">
-        <div className="landing-cta-box">
-          <h2 className="landing-h2">
-            Bereit zum <span className="gradient-text">Wissens-Teilen?</span>
-          </h2>
+        <div className="landing-cta-box reveal">
+          <ScrambleHeading className="landing-h2" plain="Bereit zum" gradient="Wissens-Teilen?" />
           <p className="landing-muted" style={{ margin: "10px auto 28px", maxWidth: 380 }}>
             Kein Abo, keine Kreditkarte – einfach mit Google anmelden und loslegen.
           </p>
-          <button
-            className="login-google-btn"
-            style={{ margin: "0 auto" }}
-            onClick={() => signInWithPopup(auth, googleProvider)}
-          >
+          <MagneticButton style={{ margin: "0 auto" }} onClick={() => signInWithPopup(auth, googleProvider)}>
             {GOOGLE_ICON}
             Mit Google anmelden
-          </button>
+          </MagneticButton>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
       <footer className="landing-footer">
-        <span>© 2025 SkillShare · Made with 💜</span>
+        <span>© 2025 SkillShare · Gemacht für Schüler</span>
         <span>v0.0.67</span>
       </footer>
 
